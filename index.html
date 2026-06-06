@@ -404,6 +404,73 @@ button:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
   box-shadow: 0 6px 0 var(--mint-dark);
 }
 
+.candidates-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.8rem 0 0.2rem;
+  width: 100%;
+}
+
+.candidate-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--foam);
+  border: 2px solid var(--foam-mid);
+  border-radius: var(--radius-xs);
+  padding: 0.55rem 0.8rem;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.candidate-row:hover {
+  border-color: var(--ocean-light);
+  background: var(--white);
+}
+
+.candidate-num {
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-weight: 800;
+  min-width: 18px;
+}
+
+.candidate-name {
+  flex: 1;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--navy);
+  text-align: left;
+}
+
+.btn-confirm-captain {
+  background: var(--sun);
+  color: var(--navy);
+  border: 2px solid var(--sun-dark);
+  font-size: 0.72rem;
+  padding: 0.3rem 0.75rem;
+  box-shadow: 0 2px 0 var(--sun-dark);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.btn-confirm-captain:hover:not(:disabled) {
+  background: #ffe066;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 0 var(--sun-dark);
+}
+
+.btn-cancel {
+  background: transparent;
+  color: var(--muted);
+  border: 2px solid var(--foam-mid);
+  font-size: 0.75rem;
+  padding: 0.4rem 0.9rem;
+}
+.btn-cancel:hover:not(:disabled) {
+  background: var(--foam);
+  color: var(--ocean-deep);
+}
+
 .btn-move-done {
   background: var(--mint);
   color: var(--white);
@@ -428,70 +495,6 @@ button:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 .btn-restore:hover:not(:disabled) {
   background: var(--foam-mid);
   transform: translateY(-1px);
-}
-
-.btn-cancel {
-  background: transparent;
-  color: var(--muted);
-  border: 2px solid var(--foam-mid);
-  font-size: 0.75rem; padding: 0.4rem 0.9rem;
-}
-.btn-cancel:hover:not(:disabled) {
-  background: var(--foam);
-  color: var(--ocean-deep);
-}
-
-.btn-set-captain {
-  background: var(--sun);
-  color: var(--navy);
-  border: 2px solid var(--sun-dark);
-  font-size: 0.78rem; padding: 0.28rem 0.6rem;
-  box-shadow: 0 2px 0 var(--sun-dark);
-  flex-shrink: 0;
-  title: "Set as Captain";
-}
-.btn-set-captain:hover:not(:disabled) {
-  background: #ffe066;
-  transform: translateY(-1px);
-  box-shadow: 0 3px 0 var(--sun-dark);
-}
-
-.btn-skull {
-  background: transparent;
-  color: var(--navy);
-  border: 2px solid #bbb;
-  font-size: 0.78rem; padding: 0.28rem 0.55rem;
-  flex-shrink: 0;
-  opacity: 0.7;
-}
-.btn-skull:hover:not(:disabled) {
-  border-color: var(--coral);
-  opacity: 1;
-  transform: translateY(-1px);
-}
-.btn-skull-max {
-  opacity: 0.25;
-  cursor: not-allowed;
-}
-.btn-skull-max:hover { transform: none !important; }
-
-.skull-row {
-  font-size: 0.72rem;
-  margin-left: 0.4rem;
-  letter-spacing: 0.05em;
-  vertical-align: middle;
-}
-
-.skull-clickable {
-  cursor: pointer;
-  display: inline-block;
-  transition: transform 0.1s, opacity 0.1s;
-  opacity: 0.85;
-}
-.skull-clickable:hover {
-  transform: scale(1.3);
-  opacity: 1;
-  filter: sepia(1) saturate(3) hue-rotate(300deg);
 }
 
 .btn-danger {
@@ -711,8 +714,9 @@ footer {
   <div class="captain-card" id="captainCard">
     <div class="captain-card-inner">
       <div class="captain-flag">🏴‍☠️</div>
-      <div class="captain-label">⚓ Captain of the Day ⚓</div>
+      <div class="captain-label" id="captainLabel">⚓ Captain of the Day ⚓</div>
       <div class="captain-name empty" id="captainName">No captain yet, mate!</div>
+      <div id="candidatesGrid" style="display:none;"></div>
       <div class="action-row" id="actionRow"></div>
     </div>
   </div>
@@ -754,7 +758,6 @@ footer {
       <div class="section-title" style="margin-top:2rem;">Change password</div>
       <div class="change-pw-box">
         <div style="display:flex;flex-direction:column;gap:0.5rem;">
-          <input type="password" id="currentPw" placeholder="Current password…" style="flex:none;width:100%;" />
           <input type="password" id="newPw1" placeholder="New password…" style="flex:none;width:100%;" />
           <input type="password" id="newPw2" placeholder="Confirm new password…" style="flex:none;width:100%;" />
           <div style="display:flex;justify-content:flex-end;margin-top:0.4rem;">
@@ -774,7 +777,6 @@ footer {
 <script>
 const SUPABASE_URL = 'https://ypimsubvdyebewxzlorr.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwaW1zdWJ2ZHllYmV3eHpsb3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMjQ0MTcsImV4cCI6MjA5MjkwMDQxN30.g1MnxpzLaiqgOwPT15iqlCVJtNNlzhdDWIaTd097TEs';
-const EDGE_BASE = `${SUPABASE_URL}/functions/v1`;
 
 let supabaseClient = null;
 let state = null;
@@ -793,7 +795,6 @@ async function startApp(url, key) {
     return;
   }
   state = migrateDone(data.data);
-  delete state.adminPw; // password is now server-side only, never kept in browser
   isAdmin = loadAdminSession();
   document.getElementById('loadingScreen').style.display = 'none';
   document.getElementById('mainUI').classList.add('show');
@@ -803,7 +804,6 @@ async function startApp(url, key) {
     .channel('guild_state_changes')
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'guild_state' }, payload => {
       state = migrateDone(payload.new.data);
-      delete state.adminPw;
       render();
     })
     .subscribe();
@@ -858,33 +858,16 @@ function clearAdminSession() {
   localStorage.removeItem(ADMIN_SESSION_KEY);
 }
 
-async function submitPassword() {
+function submitPassword() {
   const val = document.getElementById('pwInput').value;
-  const errEl = document.getElementById('pwError');
-  const btn = document.querySelector('#pwOverlay .btn-primary');
-  btn.disabled = true;
-  btn.textContent = 'Checking…';
-  try {
-    const res = await fetch(`${EDGE_BASE}/verify-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
-      body: JSON.stringify({ password: val }),
-    });
-    const { ok } = await res.json();
-    if (ok) {
-      isAdmin = true;
-      saveAdminSession();
-      closeOverlay(); render();
-    } else {
-      errEl.textContent = '🚫 Wrong password, landlubber!';
-      document.getElementById('pwInput').value = '';
-      document.getElementById('pwInput').focus();
-    }
-  } catch(e) {
-    errEl.textContent = '⚠️ Could not reach server. Try again.';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Enter';
+  if (val === (state.adminPw || 'captain123')) {
+    isAdmin = true;
+    saveAdminSession();
+    closeOverlay(); render();
+  } else {
+    document.getElementById('pwError').textContent = '🚫 Wrong password, landlubber!';
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').focus();
   }
 }
 
@@ -898,36 +881,18 @@ function logout() {
   render();
 }
 async function changePassword() {
-  const current = document.getElementById('currentPw').value.trim();
   const p1 = document.getElementById('newPw1').value.trim();
   const p2 = document.getElementById('newPw2').value.trim();
   const msg = document.getElementById('pwChangeMsg');
-  if (!current) { msg.style.color = 'var(--coral)'; msg.textContent = 'Enter your current password.'; return; }
-  if (!p1) { msg.style.color = 'var(--coral)'; msg.textContent = 'New password cannot be empty!'; return; }
+  if (!p1) { msg.style.color = 'var(--coral)'; msg.textContent = 'Password cannot be empty!'; return; }
   if (p1 !== p2) { msg.style.color = 'var(--coral)'; msg.textContent = "Passwords don't match!"; return; }
-  msg.style.color = 'var(--muted)'; msg.textContent = 'Updating…';
-  try {
-    const res = await fetch(`${EDGE_BASE}/change-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
-      body: JSON.stringify({ currentPassword: current, newPassword: p1 }),
-    });
-    const { ok, error } = await res.json();
-    if (ok) {
-      document.getElementById('currentPw').value = '';
-      document.getElementById('newPw1').value = '';
-      document.getElementById('newPw2').value = '';
-      msg.style.color = 'var(--mint-dark)';
-      msg.textContent = '✓ Password updated!';
-      setTimeout(() => msg.textContent = '', 3000);
-    } else {
-      msg.style.color = 'var(--coral)';
-      msg.textContent = error || 'Failed to update password.';
-    }
-  } catch(e) {
-    msg.style.color = 'var(--coral)';
-    msg.textContent = '⚠️ Could not reach server.';
-  }
+  state.adminPw = p1;
+  await saveState();
+  document.getElementById('newPw1').value = '';
+  document.getElementById('newPw2').value = '';
+  msg.style.color = 'var(--mint-dark)';
+  msg.textContent = '✓ Password updated!';
+  setTimeout(() => msg.textContent = '', 3000);
 }
 
 function shuffle(arr) {
@@ -945,18 +910,29 @@ function sortAlpha(arr) {
 
 async function pickCaptain() {
   if (!isAdmin) return;
+  // if remaining is empty, start a new cycle
   if (state.remaining.length === 0) {
     state.remaining = shuffle(state.done.map(d => d.name));
     state.done = [];
     state.current = null;
+    state.candidates = [];
     document.getElementById('cycleBanner').style.display = 'block';
     setTimeout(() => document.getElementById('cycleBanner').style.display = 'none', 4500);
   }
   if (state.remaining.length === 0) { render(); return; }
-  const idx = Math.floor(Math.random() * state.remaining.length);
-  // save undo snapshot before mutating
+  // save snapshot for cancel
   state.previousCaptain = state.lastCaptain || null;
-  state.current = state.remaining.splice(idx, 1)[0];
+  // draw up to 5 candidates
+  const pool = [...state.remaining];
+  const count = Math.min(5, pool.length);
+  const picked = [];
+  for (let i = 0; i < count; i++) {
+    const idx = Math.floor(Math.random() * pool.length);
+    picked.push(pool.splice(idx, 1)[0]);
+  }
+  state.candidates = picked;
+  state.remaining = pool;
+  state.current = null;
   state.lastCaptain = null;
   await saveState(); render();
   const card = document.getElementById('captainCard');
@@ -965,12 +941,25 @@ async function pickCaptain() {
   card.classList.add('revealed');
 }
 
-async function cancelPick() {
-  if (!isAdmin || !state.current) return;
-  // put the current pick back into remaining
-  state.remaining = sortAlpha([...state.remaining, state.current]);
+async function confirmCandidate(name) {
+  if (!isAdmin) return;
+  // set chosen person as confirmed captain
+  state.done = [...state.done, { name, status: 'done' }];
+  state.lastCaptain = name;
+  // put the remaining candidates back into remaining (at front so they come up soon)
+  const others = (state.candidates || []).filter(n => n !== name);
+  state.remaining = [...others, ...state.remaining];
+  state.candidates = [];
   state.current = null;
-  // restore whoever was captain before this pick
+  await saveState(); render();
+}
+
+async function cancelCandidates() {
+  if (!isAdmin) return;
+  // put all candidates back into remaining
+  state.remaining = sortAlpha([...(state.candidates || []), ...state.remaining]);
+  state.candidates = [];
+  state.current = null;
   state.lastCaptain = state.previousCaptain || null;
   state.previousCaptain = null;
   await saveState(); render();
@@ -1022,6 +1011,7 @@ async function removePerson(name) {
   state.team = state.team.filter(n => n !== name);
   state.remaining = state.remaining.filter(n => n !== name);
   state.done = state.done.filter(d => d.name !== name);
+  state.candidates = (state.candidates || []).filter(n => n !== name);
   if (state.current === name) state.current = null;
   await saveState(); render();
 }
@@ -1030,7 +1020,7 @@ async function resetCycle() {
   if (!isAdmin) return;
   if (!confirm('Reset the voyage? Everyone sails again!')) return;
   state.remaining = shuffle(state.team);
-  state.done = []; state.current = null;
+  state.done = []; state.current = null; state.candidates = [];
   await saveState(); render();
 }
 
@@ -1052,41 +1042,6 @@ async function moveToCompleted(name) {
   if (!isAdmin) return;
   state.remaining = state.remaining.filter(n => n !== name);
   state.done = [...state.done, { name, status: 'done' }];
-  await saveState(); render();
-}
-
-async function setAsCaptain(name) {
-  if (!isAdmin) return;
-  // if someone is currently a pending pick, put them back in remaining
-  if (state.current) {
-    state.remaining = sortAlpha([...state.remaining, state.current]);
-  }
-  // remove the chosen person from remaining
-  state.remaining = state.remaining.filter(n => n !== name);
-  state.previousCaptain = state.lastCaptain || null;
-  state.lastCaptain = null;
-  state.current = name;
-  await saveState(); render();
-  const card = document.getElementById('captainCard');
-  card.classList.remove('revealed');
-  void card.offsetWidth;
-  card.classList.add('revealed');
-}
-
-async function addSkull(name) {
-  if (!isAdmin) return;
-  if (!state.skulls) state.skulls = {};
-  const current = state.skulls[name] || 0;
-  if (current >= 3) return;
-  state.skulls[name] = current + 1;
-  await saveState(); render();
-}
-
-async function removeSkull(name) {
-  if (!isAdmin) return;
-  if (!state.skulls || !state.skulls[name]) return;
-  state.skulls[name] = Math.max(0, state.skulls[name] - 1);
-  if (state.skulls[name] === 0) delete state.skulls[name];
   await saveState(); render();
 }
 
@@ -1113,27 +1068,51 @@ function render() {
 
   const nameEl = document.getElementById('captainName');
   const actionRow = document.getElementById('actionRow');
+  const candidatesGrid = document.getElementById('candidatesGrid');
+  const captainLabel = document.getElementById('captainLabel');
+  const candidates = state.candidates || [];
 
-  if (state.current) {
-    nameEl.textContent = state.current;
-    nameEl.classList.remove('empty');
-    actionRow.innerHTML = isAdmin ? `
-      <button class="btn-done" onclick="markDone()">⚓ Confirm Captain!</button>
-      <button class="btn-skip" onclick="skipBack()">↩ Reshuffle back in</button>
-      <button class="btn-skip" onclick="skipToDone()" style="font-size:0.72rem;">🚫 Skip this voyage</button>
-      <button class="btn-cancel" onclick="cancelPick()">✕ Cancel</button>
-    ` : '';
+  if (candidates.length > 0) {
+    // Showing candidates — pick one to be captain
+    captainLabel.textContent = '⚓ Choose Today\'s Captain ⚓';
+    nameEl.style.display = 'none';
+    candidatesGrid.style.display = 'block';
+    candidatesGrid.innerHTML = `<div class="candidates-grid">` +
+      candidates.map((n, i) => {
+        const confirmBtn = isAdmin
+          ? `<button class="btn-confirm-captain" onclick="confirmCandidate('${n.replace(/'/g,"\\'")}')">⚓ Captain!</button>`
+          : '';
+        return `<div class="candidate-row">
+          <span class="candidate-num">${i + 1}</span>
+          <span class="candidate-name">${n}</span>
+          ${confirmBtn}
+        </div>`;
+      }).join('') +
+    `</div>`;
+    actionRow.innerHTML = isAdmin
+      ? `<button class="btn-cancel" onclick="cancelCandidates()">✕ Cancel — put all back</button>`
+      : '<span style="font-size:0.8rem;color:var(--muted);font-weight:700;">Waiting for captain selection…</span>';
+
   } else if (state.lastCaptain) {
+    // Confirmed captain displayed
+    captainLabel.textContent = '⚓ Captain of the Day ⚓';
+    nameEl.style.display = 'flex';
+    candidatesGrid.style.display = 'none';
     nameEl.textContent = state.lastCaptain;
     nameEl.classList.remove('empty');
     actionRow.innerHTML = isAdmin
-      ? `<button class="btn-primary" onclick="pickCaptain()" ${state.team.length === 0 ? 'disabled' : ''}>⛵ Pick Next Captain</button>`
+      ? `<button class="btn-primary" onclick="pickCaptain()" ${state.team.length === 0 ? 'disabled' : ''}>⛵ Pick Next Candidates</button>`
       : '';
+
   } else {
+    // No captain yet
+    captainLabel.textContent = '⚓ Captain of the Day ⚓';
+    nameEl.style.display = 'flex';
+    candidatesGrid.style.display = 'none';
     nameEl.textContent = state.team.length === 0 ? 'No crew aboard yet!' : 'No captain yet, mate!';
     nameEl.classList.add('empty');
     actionRow.innerHTML = isAdmin
-      ? `<button class="btn-primary" onclick="pickCaptain()" ${state.team.length === 0 ? 'disabled' : ''}>⛵ Pick Captain</button>`
+      ? `<button class="btn-primary" onclick="pickCaptain()" ${state.team.length === 0 ? 'disabled' : ''}>⛵ Pick Candidates</button>`
       : '';
   }
 
@@ -1142,20 +1121,10 @@ function render() {
   remainingList.innerHTML = sortedRemaining.length === 0
     ? '<div class="empty-state">No crew remaining this voyage.</div>'
     : sortedRemaining.map((n, i) => {
-        const skullCount = (state.skulls && state.skulls[n]) || 0;
-        const skullHtml = isAdmin
-          ? Array.from({length: skullCount}, () => `<span class="skull-clickable" onclick="removeSkull('${n.replace(/'/g,"\\'")}')">💀</span>`).join('')
-          : '💀'.repeat(skullCount);
-        const adminBtns = isAdmin ? `
-          <button class="btn-set-captain" onclick="setAsCaptain('${n.replace(/'/g,"\\'")}')">⚓</button>
-          <button class="btn-move-done" onclick="moveToCompleted('${n.replace(/'/g,"\\'")}')">✓</button>
-          <button class="btn-skull ${skullCount >= 3 ? 'btn-skull-max' : ''}" onclick="addSkull('${n.replace(/'/g,"\\'")}')">💀</button>
-        ` : '';
-        return `<div class="list-item">
-          <span class="list-num">${i+1}</span>
-          <span class="list-name">${n}${skullCount ? `<span class="skull-row">${skullHtml}</span>` : ''}</span>
-          ${adminBtns}
-        </div>`;
+        const moveBtn = isAdmin
+          ? `<button class="btn-move-done" onclick="moveToCompleted('${n.replace(/'/g,"\\'")}')">✓ Done</button>`
+          : '';
+        return `<div class="list-item"><span class="list-num">${i+1}</span><span class="list-name">${n}</span>${moveBtn}</div>`;
       }).join('');
 
   const doneList = document.getElementById('doneList');
@@ -1168,17 +1137,10 @@ function render() {
         const restoreBtn = isAdmin
           ? `<button class="btn-restore" onclick="restoreToRemaining('${d.name.replace(/'/g,"\\'")}')">↩ Restore</button>`
           : '';
-        const skullCount2 = (state.skulls && state.skulls[d.name]) || 0;
-        const skullHtml2 = isAdmin
-          ? Array.from({length: skullCount2}, () => `<span class="skull-clickable" onclick="removeSkull('${d.name.replace(/'/g,"\\'")}')">💀</span>`).join('')
-          : '💀'.repeat(skullCount2);
-        const addSkullBtn2 = isAdmin
-          ? `<button class="btn-skull ${skullCount2 >= 3 ? 'btn-skull-max' : ''}" onclick="addSkull('${d.name.replace(/'/g,"\\'")}')">💀</button>`
-          : '';
         return `<div class="list-item done-item">
           <span class="list-num">${i+1}</span>
-          <span class="list-name">${d.name}${skullCount2 ? `<span class="skull-row">${skullHtml2}</span>` : ''}</span>
-          ${badge}${restoreBtn}${addSkullBtn2}
+          <span class="list-name">${d.name}</span>
+          ${badge}${restoreBtn}
         </div>`;
       }).join('');
 
@@ -1189,17 +1151,16 @@ function render() {
       ? '<div class="empty-state">No crew yet. Add some above!</div>'
       : sortedTeam.map(n => {
           const isCurrent = state.current === n;
+          const isCandidate = (state.candidates || []).includes(n);
           const inDone = state.done.find(d => d.name === n);
           let badge = '';
           if (isCurrent) badge = `<span class="badge" style="background:#fff8d4;color:#8a6000;border:2px solid #f5d43a;">Today ⚓</span>`;
+          else if (isCandidate) badge = `<span class="badge" style="background:#e8f4f8;color:#1a5f8a;border:2px solid #2a8bc0;">Candidate 🎯</span>`;
           else if (inDone) badge = inDone.status === 'skipped'
             ? `<span class="badge badge-skipped">Skipped</span>`
             : `<span class="badge badge-done">Done</span>`;
           else badge = `<span class="badge badge-queued">Queued</span>`;
-          const skullCountM = (state.skulls && state.skulls[n]) || 0;
-          const skullHtmlM = skullCountM ? '<span class="skull-row">' + Array.from({length: skullCountM}, () => `<span class="skull-clickable" onclick="removeSkull('${n.replace(/'/g,"\\'")}')">💀</span>`).join('') + '</span>' : '';
-          const addSkullBtnM = `<button class="btn-skull ${skullCountM >= 3 ? 'btn-skull-max' : ''}" onclick="addSkull('${n.replace(/'/g,"\\'")}')">💀</button>`;
-          return `<div class="list-item"><span class="list-name">${n}${skullHtmlM}</span>${badge}${addSkullBtnM}<button class="btn-danger" onclick="removePerson('${n.replace(/'/g,"\\'")}')">Remove</button></div>`;
+          return `<div class="list-item"><span class="list-name">${n}</span>${badge}<button class="btn-danger" onclick="removePerson('${n.replace(/'/g,"\\'")}')">Remove</button></div>`;
         }).join('');
   }
 }
