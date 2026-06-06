@@ -649,6 +649,169 @@ input::placeholder { color: var(--muted); font-style: italic; }
 /* ══════════════════════════════════════
    FOOTER
 ══════════════════════════════════════ */
+/* ══════════════════════════════════════
+   TOAST NOTIFICATIONS
+══════════════════════════════════════ */
+#toastContainer {
+  position: fixed;
+  bottom: 5rem; left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 0.5rem;
+  pointer-events: none;
+  width: 90%;
+  max-width: 360px;
+}
+
+.toast {
+  background: var(--navy);
+  color: var(--white);
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius-sm);
+  padding: 0.7rem 1.2rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+  width: 100%;
+  backdrop-filter: blur(8px);
+  animation: toast-in 0.25s ease-out forwards;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.toast.success { background: var(--mint-dark); border-color: var(--mint); }
+.toast.warning { background: #c07820; border-color: var(--sun); }
+.toast.error   { background: var(--coral-dark); border-color: var(--coral); }
+.toast.fade-out { animation: toast-out 0.3s ease-in forwards; }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(-8px) scale(0.95); }
+}
+
+/* ══════════════════════════════════════
+   CYCLE PROGRESS BAR
+══════════════════════════════════════ */
+.cycle-progress {
+  width: 100%;
+  margin-bottom: 1.2rem;
+}
+.cycle-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--foam-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.4rem;
+}
+.cycle-progress-track {
+  width: 100%;
+  height: 8px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 99px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.cycle-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--mint), var(--sun));
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 4px;
+}
+
+/* ══════════════════════════════════════
+   SEARCH INPUT
+══════════════════════════════════════ */
+.search-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 0.6rem;
+}
+.search-wrapper input {
+  width: 100%;
+  padding-left: 2.2rem;
+  flex: none;
+}
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.85rem;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* ══════════════════════════════════════
+   INLINE CONFIRM DIALOG
+══════════════════════════════════════ */
+.inline-confirm {
+  background: var(--white);
+  border: 2px solid var(--coral);
+  border-radius: var(--radius-sm);
+  padding: 0.8rem 1rem;
+  margin-top: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  animation: toast-in 0.2s ease-out forwards;
+}
+.inline-confirm-text {
+  flex: 1;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--coral-dark);
+  min-width: 140px;
+}
+.btn-confirm-yes {
+  background: var(--coral);
+  color: var(--white);
+  border: 2px solid var(--coral-dark);
+  font-size: 0.75rem;
+  padding: 0.3rem 0.8rem;
+}
+.btn-confirm-yes:hover { background: var(--coral-dark); }
+.btn-confirm-no {
+  background: transparent;
+  color: var(--muted);
+  border: 2px solid var(--foam-mid);
+  font-size: 0.75rem;
+  padding: 0.3rem 0.8rem;
+}
+.btn-confirm-no:hover { background: var(--foam); color: var(--ocean-deep); }
+
+/* ══════════════════════════════════════
+   CAPTAIN TIMESTAMP
+══════════════════════════════════════ */
+.captain-timestamp {
+  font-size: 0.65rem;
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin-top: 0.3rem;
+  font-style: italic;
+}
+
+/* ══════════════════════════════════════
+   CANDIDATE FLASH ANIMATION
+══════════════════════════════════════ */
+@keyframes candidate-flash {
+  0%   { background: rgba(255,217,61,0.35); border-color: var(--sun); }
+  100% { background: var(--foam); border-color: var(--foam-mid); }
+}
+.candidate-row.new-entry {
+  animation: candidate-flash 0.8s ease-out forwards;
+}
+
 footer {
   margin-top: 3rem; font-size: 0.7rem; color: var(--foam-mid);
   text-align: center; letter-spacing: 0.08em; font-weight: 700; opacity: 0.7;
@@ -669,6 +832,8 @@ footer {
 <div class="sparkle" style="left:80%;top:20%;animation-duration:3s;animation-delay:1s;"></div>
 <div class="sparkle" style="left:50%;top:50%;animation-duration:2s;animation-delay:0.5s;"></div>
 <div class="sparkle" style="left:65%;top:70%;animation-duration:3.5s;animation-delay:2s;"></div>
+
+<div id="toastContainer"></div>
 
 <!-- Password overlay -->
 <div id="pwOverlay">
@@ -720,6 +885,16 @@ footer {
 
   <div class="stats-bar" id="statsBar"></div>
 
+  <div class="cycle-progress" id="cycleProgress">
+    <div class="cycle-progress-label">
+      <span>Voyage progress</span>
+      <span id="cycleProgressText">0 / 0</span>
+    </div>
+    <div class="cycle-progress-track">
+      <div class="cycle-progress-fill" id="cycleProgressFill" style="width:0%"></div>
+    </div>
+  </div>
+
   <div class="cycle-banner" id="cycleBanner">
     <strong>🎉 All Hands Have Sailed! 🎉</strong>
     Every crew member has led. Starting a new voyage!
@@ -731,6 +906,7 @@ footer {
       <div class="captain-flag">🏴‍☠️</div>
       <div class="captain-label" id="captainLabel">⚓ Captain of the Day ⚓</div>
       <div class="captain-name empty" id="captainName">No captain yet, mate!</div>
+      <div class="captain-timestamp" id="captainTimestamp"></div>
       <div id="candidatesGrid" style="display:none;"></div>
       <div class="action-row" id="actionRow"></div>
     </div>
@@ -741,12 +917,16 @@ footer {
   <!-- Tabs -->
   <div class="tabs-wrapper">
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('remaining',event)">🗺 Remaining</button>
-      <button class="tab" onclick="switchTab('done',event)">✅ Completed</button>
+      <button class="tab active" id="tab-remaining" onclick="switchTab('remaining',event)">🗺 Remaining</button>
+      <button class="tab" id="tab-done" onclick="switchTab('done',event)">✅ Completed</button>
       <button class="tab" id="manageTab" onclick="switchTab('manage',event)" style="display:none;">⚙ Manage Crew</button>
     </div>
 
     <div class="panel active" id="panel-remaining">
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchRemaining" placeholder="Search remaining crew…" oninput="render()" />
+      </div>
       <div class="section-title">Remaining this voyage</div>
       <div class="list-box" id="remainingList"></div>
     </div>
@@ -764,11 +944,16 @@ footer {
       </div>
 
       <div class="section-title" style="margin-top:1.5rem;">All crew</div>
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchManage" placeholder="Search crew…" oninput="render()" />
+      </div>
       <div class="list-box" id="manageList"></div>
       <div class="manage-row">
-        <button class="btn-danger" onclick="resetCycle()">🔄 Reset voyage</button>
-        <button class="btn-danger" onclick="clearAll()">🗑 Remove all</button>
+        <button class="btn-danger" onclick="promptReset()">🔄 Reset voyage</button>
+        <button class="btn-danger" onclick="promptClearAll()">🗑 Remove all</button>
       </div>
+      <div id="inlineConfirmSlot"></div>
 
       <div class="section-title" style="margin-top:2rem;">Change password</div>
       <div class="change-pw-box">
@@ -796,6 +981,72 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 let supabaseClient = null;
 let state = null;
 let isAdmin = false;
+
+// ── toast notifications ──
+function toast(msg, type = 'success', duration = 2800) {
+  const container = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('fade-out');
+    el.addEventListener('animationend', () => el.remove());
+  }, duration);
+}
+
+// ── keyboard shortcut: A = open admin login ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'a' || e.key === 'A') {
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+    if (!isAdmin) openOverlay();
+  }
+});
+
+// ── inline confirm dialogs ──
+function showInlineConfirm(message, onConfirm) {
+  const slot = document.getElementById('inlineConfirmSlot');
+  slot.innerHTML = `
+    <div class="inline-confirm">
+      <span class="inline-confirm-text">⚠️ ${message}</span>
+      <button class="btn-confirm-yes" onclick="confirmInline()">Yes, do it</button>
+      <button class="btn-confirm-no" onclick="cancelInline()">Cancel</button>
+    </div>`;
+  window._pendingConfirm = onConfirm;
+}
+function confirmInline() {
+  if (window._pendingConfirm) window._pendingConfirm();
+  clearInlineConfirm();
+}
+function cancelInline() { clearInlineConfirm(); }
+function clearInlineConfirm() {
+  const slot = document.getElementById('inlineConfirmSlot');
+  if (slot) slot.innerHTML = '';
+  window._pendingConfirm = null;
+}
+
+function promptReset() {
+  if (!isAdmin) return;
+  showInlineConfirm('Reset the voyage? Everyone sails again!', resetCycle);
+}
+function promptClearAll() {
+  if (!isAdmin) return;
+  showInlineConfirm('Remove ALL crew members? This cannot be undone!', clearAll);
+}
+
+// ── human-readable timestamp ──
+function timeAgo(isoString) {
+  if (!isoString) return '';
+  const diff = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
+}
 
 async function init() {
   await startApp(SUPABASE_URL, SUPABASE_KEY);
@@ -958,45 +1209,52 @@ async function pickCaptain() {
 
 async function confirmCandidate(name) {
   if (!isAdmin) return;
-  // set chosen person as confirmed captain
   state.done = [...state.done, { name, status: 'done' }];
   state.lastCaptain = name;
-  // put the remaining candidates back into remaining (at front so they come up soon)
+  state.captainSetAt = new Date().toISOString();
   const others = (state.candidates || []).filter(n => n !== name);
   state.remaining = [...others, ...state.remaining];
   state.candidates = [];
   state.current = null;
   await saveState(); render();
+  toast(`⚓ ${name} is Captain of the Day!`, 'success', 3500);
 }
 
 async function rerollCandidate(name) {
   if (!isAdmin) return;
   if (state.remaining.length === 0) return;
-  // put this person back into remaining
   state.remaining = sortAlpha([...state.remaining, name]);
-  // draw a replacement from remaining (excluding people already in candidates)
   const otherCandidates = (state.candidates || []).filter(n => n !== name);
   const pool = state.remaining.filter(n => !otherCandidates.includes(n));
+  let replacement = null;
   if (pool.length === 0) {
     state.candidates = otherCandidates;
   } else {
     const idx = Math.floor(Math.random() * pool.length);
-    const replacement = pool[idx];
+    replacement = pool[idx];
     state.remaining = state.remaining.filter(n => n !== replacement);
     state.candidates = (state.candidates || []).map(n => n === name ? replacement : n);
   }
   await saveState(); render();
+  if (replacement) {
+    toast(`🎲 Rerolled ${name} → ${replacement}`, 'warning', 2500);
+    // flash the new entry
+    setTimeout(() => {
+      const rows = document.querySelectorAll('.candidate-row');
+      rows.forEach(r => { if (r.querySelector('.candidate-name')?.textContent === replacement) r.classList.add('new-entry'); });
+    }, 50);
+  }
 }
 
 async function cancelCandidates() {
   if (!isAdmin) return;
-  // put all candidates back into remaining
   state.remaining = sortAlpha([...(state.candidates || []), ...state.remaining]);
   state.candidates = [];
   state.current = null;
   state.lastCaptain = state.previousCaptain || null;
   state.previousCaptain = null;
   await saveState(); render();
+  toast('↩ Candidates returned to pool', 'warning', 2000);
 }
 
 async function skipBack() {
@@ -1026,6 +1284,7 @@ async function restoreToRemaining(name) {
   state.done = state.done.filter(d => d.name !== name);
   state.remaining = sortAlpha([...state.remaining, name]);
   await saveState(); render();
+  toast(`↩ ${name} restored to remaining`, 'warning', 2000);
 }
 
 async function addPerson() {
@@ -1041,28 +1300,30 @@ async function addPerson() {
 
 async function removePerson(name) {
   if (!isAdmin) return;
-  if (!confirm('Remove ' + name + ' from the crew?')) return;
   state.team = state.team.filter(n => n !== name);
   state.remaining = state.remaining.filter(n => n !== name);
   state.done = state.done.filter(d => d.name !== name);
   state.candidates = (state.candidates || []).filter(n => n !== name);
   if (state.current === name) state.current = null;
   await saveState(); render();
+  toast(`🗑 ${name} removed from crew`, 'error', 2000);
 }
 
 async function resetCycle() {
   if (!isAdmin) return;
-  if (!confirm('Reset the voyage? Everyone sails again!')) return;
+  clearInlineConfirm();
   state.remaining = shuffle(state.team);
   state.done = []; state.current = null; state.candidates = [];
   await saveState(); render();
+  toast('🔄 Voyage reset — all hands back in the pool!', 'warning', 3000);
 }
 
 async function clearAll() {
   if (!isAdmin) return;
-  if (!confirm('Remove ALL crew members? This cannot be undone!')) return;
-  state.team = []; state.remaining = []; state.done = []; state.current = null;
+  clearInlineConfirm();
+  state.team = []; state.remaining = []; state.done = []; state.current = null; state.candidates = [];
   await saveState(); render();
+  toast('🗑 All crew removed', 'error', 3000);
 }
 
 function switchTab(tab, e) {
@@ -1077,6 +1338,7 @@ async function moveToCompleted(name) {
   state.remaining = state.remaining.filter(n => n !== name);
   state.done = [...state.done, { name, status: 'done' }];
   await saveState(); render();
+  toast(`✅ ${name} marked as done`, 'success', 2000);
 }
 
 function render() {
@@ -1094,22 +1356,37 @@ function render() {
     document.getElementById('manageTab').style.display = 'none';
   }
 
+  // stats
   document.getElementById('statsBar').innerHTML = `
     <div class="stat"><div class="stat-number">${state.remaining.length}</div><div class="stat-label">🗺 Remaining</div></div>
     <div class="stat"><div class="stat-number">${state.done.length}</div><div class="stat-label">✅ Completed</div></div>
     <div class="stat"><div class="stat-number">${state.team.length}</div><div class="stat-label">👥 Crew</div></div>
   `;
 
+  // progress bar
+  const total = state.team.length;
+  const completed = state.done.length;
+  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  document.getElementById('cycleProgressFill').style.width = pct + '%';
+  document.getElementById('cycleProgressText').textContent = `${completed} / ${total}`;
+
+  // tab badge counts
+  const tabRemaining = document.getElementById('tab-remaining');
+  const tabDone = document.querySelector('.tab:nth-child(2)');
+  if (tabRemaining) tabRemaining.textContent = `🗺 Remaining (${state.remaining.length})`;
+  if (tabDone) tabDone.textContent = `✅ Completed (${state.done.length})`;
+
   const nameEl = document.getElementById('captainName');
   const actionRow = document.getElementById('actionRow');
   const candidatesGrid = document.getElementById('candidatesGrid');
   const captainLabel = document.getElementById('captainLabel');
+  const timestampEl = document.getElementById('captainTimestamp');
   const candidates = state.candidates || [];
 
   if (candidates.length > 0) {
-    // Showing candidates — pick one to be captain
     captainLabel.textContent = '⚓ Choose Today\'s Captain ⚓';
     nameEl.style.display = 'none';
+    if (timestampEl) timestampEl.textContent = '';
     candidatesGrid.style.display = 'block';
     candidatesGrid.innerHTML = `<div class="candidates-grid">` +
       candidates.map((n, i) => {
@@ -1131,39 +1408,45 @@ function render() {
       : '<span style="font-size:0.8rem;color:var(--muted);font-weight:700;">Waiting for captain selection…</span>';
 
   } else if (state.lastCaptain) {
-    // Confirmed captain displayed
     captainLabel.textContent = '⚓ Captain of the Day ⚓';
     nameEl.style.display = 'flex';
     candidatesGrid.style.display = 'none';
     nameEl.textContent = state.lastCaptain;
     nameEl.classList.remove('empty');
+    if (timestampEl) timestampEl.textContent = state.captainSetAt ? `Set ${timeAgo(state.captainSetAt)}` : '';
     actionRow.innerHTML = isAdmin
       ? `<button class="btn-primary" onclick="pickCaptain()" ${state.team.length === 0 ? 'disabled' : ''}>⛵ Pick Next Candidates</button>`
       : '';
 
   } else {
-    // No captain yet
     captainLabel.textContent = '⚓ Captain of the Day ⚓';
     nameEl.style.display = 'flex';
     candidatesGrid.style.display = 'none';
     nameEl.textContent = state.team.length === 0 ? 'No crew aboard yet!' : 'No captain yet, mate!';
     nameEl.classList.add('empty');
+    if (timestampEl) timestampEl.textContent = '';
     actionRow.innerHTML = isAdmin
       ? `<button class="btn-primary" onclick="pickCaptain()" ${state.team.length === 0 ? 'disabled' : ''}>⛵ Pick Candidates</button>`
       : '';
   }
 
+  // remaining list — with search filter
+  const searchRemaining = (document.getElementById('searchRemaining')?.value || '').toLowerCase().trim();
   const remainingList = document.getElementById('remainingList');
   const sortedRemaining = sortAlpha(state.remaining);
-  remainingList.innerHTML = sortedRemaining.length === 0
-    ? '<div class="empty-state">No crew remaining this voyage.</div>'
-    : sortedRemaining.map((n, i) => {
+  const filteredRemaining = searchRemaining
+    ? sortedRemaining.filter(n => n.toLowerCase().includes(searchRemaining))
+    : sortedRemaining;
+  remainingList.innerHTML = filteredRemaining.length === 0
+    ? `<div class="empty-state">${searchRemaining ? 'No crew match your search.' : 'No crew remaining this voyage.'}</div>`
+    : filteredRemaining.map((n, i) => {
         const moveBtn = isAdmin
-          ? `<button class="btn-move-done" onclick="moveToCompleted('${n.replace(/'/g,"\\'")}')">✓ Done</button>`
+          ? `<button class="btn-move-done" onclick="moveToCompleted('${n.replace(/'/g,"\\'")}')">✓</button>`
           : '';
         return `<div class="list-item"><span class="list-num">${i+1}</span><span class="list-name">${n}</span>${moveBtn}</div>`;
       }).join('');
 
+  // done list
   const doneList = document.getElementById('doneList');
   doneList.innerHTML = state.done.length === 0
     ? '<div class="empty-state">No one completed yet this voyage.</div>'
@@ -1172,7 +1455,7 @@ function render() {
           ? `<span class="badge badge-skipped">Skipped</span>`
           : `<span class="badge badge-done">Done</span>`;
         const restoreBtn = isAdmin
-          ? `<button class="btn-restore" onclick="restoreToRemaining('${d.name.replace(/'/g,"\\'")}')">↩ Restore</button>`
+          ? `<button class="btn-restore" onclick="restoreToRemaining('${d.name.replace(/'/g,"\\'")}')">↩</button>`
           : '';
         return `<div class="list-item done-item">
           <span class="list-num">${i+1}</span>
@@ -1181,12 +1464,17 @@ function render() {
         </div>`;
       }).join('');
 
+  // manage list — with search filter
   if (isAdmin) {
+    const searchManage = (document.getElementById('searchManage')?.value || '').toLowerCase().trim();
     const manageList = document.getElementById('manageList');
     const sortedTeam = sortAlpha(state.team);
-    manageList.innerHTML = sortedTeam.length === 0
-      ? '<div class="empty-state">No crew yet. Add some above!</div>'
-      : sortedTeam.map(n => {
+    const filteredTeam = searchManage
+      ? sortedTeam.filter(n => n.toLowerCase().includes(searchManage))
+      : sortedTeam;
+    manageList.innerHTML = filteredTeam.length === 0
+      ? `<div class="empty-state">${searchManage ? 'No crew match your search.' : 'No crew yet. Add some above!'}</div>`
+      : filteredTeam.map(n => {
           const isCurrent = state.current === n;
           const isCandidate = (state.candidates || []).includes(n);
           const inDone = state.done.find(d => d.name === n);
