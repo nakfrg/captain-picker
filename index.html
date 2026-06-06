@@ -443,6 +443,21 @@ button:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
   text-align: left;
 }
 
+.btn-reroll {
+  background: transparent;
+  color: var(--muted);
+  border: 2px solid var(--foam-mid);
+  font-size: 0.85rem;
+  padding: 0.28rem 0.5rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.btn-reroll:hover:not(:disabled) {
+  border-color: var(--ocean-light);
+  color: var(--ocean);
+  transform: rotate(180deg) scale(1.1);
+}
+
 .btn-confirm-captain {
   background: var(--sun);
   color: var(--navy);
@@ -954,6 +969,25 @@ async function confirmCandidate(name) {
   await saveState(); render();
 }
 
+async function rerollCandidate(name) {
+  if (!isAdmin) return;
+  if (state.remaining.length === 0) return;
+  // put this person back into remaining
+  state.remaining = sortAlpha([...state.remaining, name]);
+  // draw a replacement from remaining (excluding people already in candidates)
+  const otherCandidates = (state.candidates || []).filter(n => n !== name);
+  const pool = state.remaining.filter(n => !otherCandidates.includes(n));
+  if (pool.length === 0) {
+    state.candidates = otherCandidates;
+  } else {
+    const idx = Math.floor(Math.random() * pool.length);
+    const replacement = pool[idx];
+    state.remaining = state.remaining.filter(n => n !== replacement);
+    state.candidates = (state.candidates || []).map(n => n === name ? replacement : n);
+  }
+  await saveState(); render();
+}
+
 async function cancelCandidates() {
   if (!isAdmin) return;
   // put all candidates back into remaining
@@ -1082,10 +1116,13 @@ function render() {
         const confirmBtn = isAdmin
           ? `<button class="btn-confirm-captain" onclick="confirmCandidate('${n.replace(/'/g,"\\'")}')">⚓ Captain!</button>`
           : '';
+        const rerollBtn = isAdmin && state.remaining.length > 0
+          ? `<button class="btn-reroll" onclick="rerollCandidate('${n.replace(/'/g,"\\'")}')">🎲</button>`
+          : '';
         return `<div class="candidate-row">
           <span class="candidate-num">${i + 1}</span>
           <span class="candidate-name">${n}</span>
-          ${confirmBtn}
+          ${rerollBtn}${confirmBtn}
         </div>`;
       }).join('') +
     `</div>`;
