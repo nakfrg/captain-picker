@@ -443,6 +443,21 @@ button:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
   text-align: left;
 }
 
+.btn-skip-candidate {
+  background: transparent;
+  color: var(--coral-dark);
+  border: 2px solid rgba(224,85,85,0.3);
+  font-size: 0.78rem;
+  padding: 0.28rem 0.5rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.btn-skip-candidate:hover:not(:disabled) {
+  background: var(--coral);
+  color: var(--white);
+  border-color: var(--coral-dark);
+}
+
 .btn-reroll {
   background: transparent;
   color: var(--muted);
@@ -1176,8 +1191,7 @@ function sortAlpha(arr) {
 
 async function pickCaptain() {
   if (!isAdmin) return;
-  // if remaining is empty, start a new cycle
-  if (state.remaining.length === 0) {
+  if (state.remaining.length === 0 && (state.candidates || []).length === 0) {
     state.remaining = shuffle(state.done.map(d => d.name));
     state.done = [];
     state.current = null;
@@ -1185,21 +1199,19 @@ async function pickCaptain() {
     document.getElementById('cycleBanner').style.display = 'block';
     setTimeout(() => document.getElementById('cycleBanner').style.display = 'none', 4500);
   }
-  if (state.remaining.length === 0) { render(); return; }
-  // save snapshot for cancel
   state.previousCaptain = state.lastCaptain || null;
-  // draw up to 5 candidates
+  // top up candidates to 5 from remaining
+  const existing = state.candidates || [];
+  const needed = Math.max(0, 5 - existing.length);
   const pool = [...state.remaining];
-  const count = Math.min(5, pool.length);
   const picked = [];
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < Math.min(needed, pool.length); i++) {
     const idx = Math.floor(Math.random() * pool.length);
     picked.push(pool.splice(idx, 1)[0]);
   }
-  state.candidates = picked;
+  state.candidates = [...existing, ...picked];
   state.remaining = pool;
   state.current = null;
-  state.lastCaptain = null;
   await saveState(); render();
   const card = document.getElementById('captainCard');
   card.classList.remove('revealed');
@@ -1209,12 +1221,12 @@ async function pickCaptain() {
 
 async function confirmCandidate(name) {
   if (!isAdmin) return;
+  // mark as done and set as today's captain
   state.done = [...state.done, { name, status: 'done' }];
   state.lastCaptain = name;
   state.captainSetAt = new Date().toISOString();
-  const others = (state.candidates || []).filter(n => n !== name);
-  state.remaining = [...others, ...state.remaining];
-  state.candidates = [];
+  // remove from candidates — keep the rest in place for next days
+  state.candidates = (state.candidates || []).filter(n => n !== name);
   state.current = null;
   await saveState(); render();
   toast(`⚓ ${name} is Captain of the Day!`, 'success', 3500);
@@ -1238,12 +1250,62 @@ async function rerollCandidate(name) {
   await saveState(); render();
   if (replacement) {
     toast(`🎲 Rerolled ${name} → ${replacement}`, 'warning', 2500);
-    // flash the new entry
     setTimeout(() => {
       const rows = document.querySelectorAll('.candidate-row');
       rows.forEach(r => { if (r.querySelector('.candidate-name')?.textContent === replacement) r.classList.add('new-entry'); });
     }, 50);
   }
+}
+
+async function rerollAllCandidates() {
+  if (!isAdmin) return;
+  // return all current candidates to remaining
+  state.remaining = sortAlpha([...(state.candidates || []), ...state.remaining]);
+  state.candidates = [];
+  // draw a fresh set of up to 5
+  const pool = [...state.remaining];
+  const count = Math.min(5, pool.length);
+  const picked = [];
+  for (let i = 0; i < count; i++) {
+    const idx = Math.floor(Math.random() * pool.length);
+    picked.push(pool.splice(idx, 1)[0]);
+  }
+  state.candidates = picked;
+  state.remaining = pool;
+  await saveState(); render();
+  toast('🎲 All candidates rerolled!', 'warning', 2000);
+}
+
+async function skipCandidate(name) {
+  if (!isAdmin) return;
+  // remove from candidates, send to completed as skipped, draw a replacement if possible
+  state.candidates = (state.candidates || []).filter(n => n !== name);
+  state.done = [...state.done, { name, status: 'skipped' }];
+  // try to pull in a replacement from remaining
+  const pool = state.remaining.filter(n => !(state.candidates || []).includes(n));
+  if (pool.length > 0) {
+    const idx = Math.floor(Math.random() * pool.length);
+    const replacement = pool[idx];
+    state.remaining = state.remaining.filter(n => n !== replacement);
+    state.candidates = [...state.candidates, replacement];
+    await saveState(); render();
+    toast(`🚫 ${name} skipped — ${replacement} added to candidates`, 'warning', 3000);
+    setTimeout(() => {
+      const rows = document.querySelectorAll('.candidate-row');
+      rows.forEach(r => { if (r.querySelector('.candidate-name')?.textContent === replacement) r.classList.add('new-entry'); });
+    }, 50);
+  } else {
+    await saveState(); render();
+    toast(`🚫 ${name} skipped`, 'warning', 2000);
+  }
+}
+
+async function skipFromRemaining(name) {
+  if (!isAdmin) return;
+  state.remaining = state.remaining.filter(n => n !== name);
+  state.done = [...state.done, { name, status: 'skipped' }];
+  await saveState(); render();
+  toast(`🚫 ${name} skipped to completed`, 'warning', 2000);
 }
 
 async function cancelCandidates() {
@@ -1385,8 +1447,14 @@ function render() {
 
   if (candidates.length > 0) {
     captainLabel.textContent = '⚓ Choose Today\'s Captain ⚓';
-    nameEl.style.display = 'none';
-    if (timestampEl) timestampEl.textContent = '';
+    nameEl.style.display = state.lastCaptain ? 'flex' : 'none';
+    if (state.lastCaptain) {
+      nameEl.textContent = state.lastCaptain;
+      nameEl.classList.remove('empty');
+      if (timestampEl) timestampEl.textContent = state.captainSetAt ? `Set ${timeAgo(state.captainSetAt)}` : '';
+    } else {
+      if (timestampEl) timestampEl.textContent = '';
+    }
     candidatesGrid.style.display = 'block';
     candidatesGrid.innerHTML = `<div class="candidates-grid">` +
       candidates.map((n, i) => {
@@ -1394,17 +1462,29 @@ function render() {
           ? `<button class="btn-confirm-captain" onclick="confirmCandidate('${n.replace(/'/g,"\\'")}')">⚓ Captain!</button>`
           : '';
         const rerollBtn = isAdmin && state.remaining.length > 0
-          ? `<button class="btn-reroll" onclick="rerollCandidate('${n.replace(/'/g,"\\'")}')">🎲</button>`
+          ? `<button class="btn-reroll" title="Reroll" onclick="rerollCandidate('${n.replace(/'/g,"\\'")}')">🎲</button>`
+          : '';
+        const skipBtn = isAdmin
+          ? `<button class="btn-skip-candidate" title="Skip to completed" onclick="skipCandidate('${n.replace(/'/g,"\\'")}')">🚫</button>`
           : '';
         return `<div class="candidate-row">
           <span class="candidate-num">${i + 1}</span>
           <span class="candidate-name">${n}</span>
-          ${rerollBtn}${confirmBtn}
+          ${skipBtn}${rerollBtn}${confirmBtn}
         </div>`;
       }).join('') +
     `</div>`;
+    const rerollAllBtn = isAdmin && state.remaining.length > 0
+      ? `<button class="btn-skip" onclick="rerollAllCandidates()">🎲 Reroll All</button>`
+      : '';
+    const cancelBtn = isAdmin
+      ? `<button class="btn-cancel" onclick="cancelCandidates()">✕ Discard all</button>`
+      : '';
+    const topUpBtn = isAdmin && state.remaining.length > 0 && candidates.length < 5
+      ? `<button class="btn-primary" onclick="pickCaptain()">⛵ Top up to 5</button>`
+      : '';
     actionRow.innerHTML = isAdmin
-      ? `<button class="btn-cancel" onclick="cancelCandidates()">✕ Cancel — put all back</button>`
+      ? `${rerollAllBtn}${topUpBtn}${cancelBtn}`
       : '<span style="font-size:0.8rem;color:var(--muted);font-weight:700;">Waiting for captain selection…</span>';
 
   } else if (state.lastCaptain) {
@@ -1415,7 +1495,7 @@ function render() {
     nameEl.classList.remove('empty');
     if (timestampEl) timestampEl.textContent = state.captainSetAt ? `Set ${timeAgo(state.captainSetAt)}` : '';
     actionRow.innerHTML = isAdmin
-      ? `<button class="btn-primary" onclick="pickCaptain()" ${state.team.length === 0 ? 'disabled' : ''}>⛵ Pick Next Candidates</button>`
+      ? `<button class="btn-primary" onclick="pickCaptain()" ${state.team.length === 0 ? 'disabled' : ''}>⛵ Pick Candidates</button>`
       : '';
 
   } else {
@@ -1430,7 +1510,7 @@ function render() {
       : '';
   }
 
-  // remaining list — with search filter
+  // remaining list — with search filter and skip button
   const searchRemaining = (document.getElementById('searchRemaining')?.value || '').toLowerCase().trim();
   const remainingList = document.getElementById('remainingList');
   const sortedRemaining = sortAlpha(state.remaining);
@@ -1441,9 +1521,12 @@ function render() {
     ? `<div class="empty-state">${searchRemaining ? 'No crew match your search.' : 'No crew remaining this voyage.'}</div>`
     : filteredRemaining.map((n, i) => {
         const moveBtn = isAdmin
-          ? `<button class="btn-move-done" onclick="moveToCompleted('${n.replace(/'/g,"\\'")}')">✓</button>`
+          ? `<button class="btn-move-done" title="Mark done" onclick="moveToCompleted('${n.replace(/'/g,"\\'")}')">✓</button>`
           : '';
-        return `<div class="list-item"><span class="list-num">${i+1}</span><span class="list-name">${n}</span>${moveBtn}</div>`;
+        const skipBtn = isAdmin
+          ? `<button class="btn-skip-candidate" title="Skip to completed" onclick="skipFromRemaining('${n.replace(/'/g,"\\'")}')">🚫</button>`
+          : '';
+        return `<div class="list-item"><span class="list-num">${i+1}</span><span class="list-name">${n}</span>${skipBtn}${moveBtn}</div>`;
       }).join('');
 
   // done list
