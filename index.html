@@ -404,6 +404,35 @@ button:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
   box-shadow: 0 6px 0 var(--mint-dark);
 }
 
+.confirmed-row {
+  background: #e8f8f0 !important;
+  border-color: var(--mint) !important;
+}
+
+.confirmed-row .candidate-name {
+  color: var(--mint-dark);
+}
+
+.btn-confirm-toggle {
+  background: transparent;
+  color: var(--muted);
+  border: 2px solid var(--foam-mid);
+  font-size: 0.95rem;
+  padding: 0.2rem 0.45rem;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: all 0.12s;
+}
+.btn-confirm-toggle:hover:not(:disabled) {
+  border-color: var(--mint);
+  color: var(--mint-dark);
+}
+.btn-confirm-toggle.confirmed {
+  background: #e8f8f0;
+  border-color: var(--mint);
+  color: var(--mint-dark);
+}
+
 .candidates-grid {
   display: flex;
   flex-direction: column;
@@ -1095,6 +1124,8 @@ async function startApp(url, key) {
 function migrateDone(s) {
   if (!s) return s;
   s.done = (s.done || []).map(d => typeof d === 'string' ? { name: d, status: 'done' } : d);
+  // normalise candidates to objects with confirmed flag
+  s.candidates = (s.candidates || []).map(c => typeof c === 'string' ? { name: c, confirmed: false } : c);
   return s;
 }
 
@@ -1201,15 +1232,18 @@ async function pickCaptain() {
   }
   state.previousCaptain = state.lastCaptain || null;
   // top up candidates to 5 from remaining
-  const existing = state.candidates || [];
-  const needed = Math.max(0, 5 - existing.length);
+  const existing = (state.candidates || []).filter(c => typeof c === 'object' && c.confirmed); // keep confirmed only when topping up after a pick
+  const needed = Math.max(0, 5 - (state.candidates || []).length);
+  // if we already have 5, just top up confirmed slots
+  const allExisting = state.candidates || [];
+  const needed2 = Math.max(0, 5 - allExisting.length);
   const pool = [...state.remaining];
   const picked = [];
-  for (let i = 0; i < Math.min(needed, pool.length); i++) {
+  for (let i = 0; i < Math.min(needed2, pool.length); i++) {
     const idx = Math.floor(Math.random() * pool.length);
     picked.push(pool.splice(idx, 1)[0]);
   }
-  state.candidates = [...existing, ...picked];
+  state.candidates = [...allExisting, ...picked.map(n => ({ name: n, confirmed: false }))];
   state.remaining = pool;
   state.current = null;
   await saveState(); render();
@@ -1221,12 +1255,28 @@ async function pickCaptain() {
 
 async function confirmCandidate(name) {
   if (!isAdmin) return;
-  // mark as done and set as today's captain
+  // Toggle confirmed state on the candidate — don't remove them yet
+  state.candidates = (state.candidates || []).map(c => {
+    const n = typeof c === 'string' ? c : c.name;
+    if (n === name) return { name: n, confirmed: !(typeof c === 'object' && c.confirmed) };
+    return typeof c === 'string' ? { name: c, confirmed: false } : c;
+  });
+  await saveState(); render();
+  const isNowConfirmed = state.candidates.find(c => c.name === name)?.confirmed;
+  toast(isNowConfirmed ? `✅ ${name} confirmed` : `↩ ${name} unconfirmed`, isNowConfirmed ? 'success' : 'warning', 1800);
+}
+
+async function setCaptainFromConfirmed(name) {
+  if (!isAdmin) return;
+  // Mark chosen person as today's captain, move them to done
   state.done = [...state.done, { name, status: 'done' }];
   state.lastCaptain = name;
   state.captainSetAt = new Date().toISOString();
-  // remove from candidates — keep the rest in place for next days
-  state.candidates = (state.candidates || []).filter(n => n !== name);
+  // Remove them from candidates, keep others (with confirmed flags preserved)
+  state.candidates = (state.candidates || []).filter(c => {
+    const n = typeof c === 'string' ? c : c.name;
+    return n !== name;
+  });
   state.current = null;
   await saveState(); render();
   toast(`⚓ ${name} is Captain of the Day!`, 'success', 3500);
@@ -1235,69 +1285,100 @@ async function confirmCandidate(name) {
 async function rerollCandidate(name) {
   if (!isAdmin) return;
   if (state.remaining.length === 0) return;
+  // return unconfirmed candidate to remaining
+  const cand = (state.candidates || []).find(c => (typeof c === 'string' ? c : c.name) === name);
+  if (cand && (typeof cand === 'object') && cand.confirmed) {
+    toast('Cannot reroll a confirmed candidate', 'error', 2000);
+    return;
+  }
   state.remaining = sortAlpha([...state.remaining, name]);
-  const otherCandidates = (state.candidates || []).filter(n => n !== name);
-  const pool = state.remaining.filter(n => !otherCandidates.includes(n));
+  const otherCandidates = (state.candidates || []).filter(c => (typeof c === 'string' ? c : c.name) !== name);
+  const otherNames = otherCandidates.map(c => typeof c === 'string' ? c : c.name);
+  const pool = state.remaining.filter(n => !otherNames.includes(n));
   let replacement = null;
-  if (pool.length === 0) {
-    state.candidates = otherCandidates;
-  } else {
+  if (pool.length > 0) {
     const idx = Math.floor(Math.random() * pool.length);
     replacement = pool[idx];
     state.remaining = state.remaining.filter(n => n !== replacement);
-    state.candidates = (state.candidates || []).map(n => n === name ? replacement : n);
+    state.candidates = (state.candidates || []).map(c => {
+      const n = typeof c === 'string' ? c : c.name;
+      return n === name ? { name: replacement, confirmed: false } : (typeof c === 'string' ? { name: c, confirmed: false } : c);
+    });
+  } else {
+    state.candidates = otherCandidates;
   }
   await saveState(); render();
   if (replacement) {
-    toast(`🎲 Rerolled ${name} → ${replacement}`, 'warning', 2500);
+    toast(`🎲 ${name} → ${replacement}`, 'warning', 2500);
     setTimeout(() => {
-      const rows = document.querySelectorAll('.candidate-row');
-      rows.forEach(r => { if (r.querySelector('.candidate-name')?.textContent === replacement) r.classList.add('new-entry'); });
+      document.querySelectorAll('.candidate-row').forEach(r => {
+        if (r.querySelector('.candidate-name')?.textContent === replacement) r.classList.add('new-entry');
+      });
     }, 50);
   }
 }
 
 async function rerollAllCandidates() {
   if (!isAdmin) return;
-  // return all current candidates to remaining
-  state.remaining = sortAlpha([...(state.candidates || []), ...state.remaining]);
-  state.candidates = [];
-  // draw a fresh set of up to 5
+  // only reroll unconfirmed, keep confirmed locked
+  const confirmed = (state.candidates || []).filter(c => typeof c === 'object' && c.confirmed);
+  const unconfirmed = (state.candidates || []).filter(c => !(typeof c === 'object' && c.confirmed));
+  const unconfirmedNames = unconfirmed.map(c => typeof c === 'string' ? c : c.name);
+  // return unconfirmed to remaining
+  state.remaining = sortAlpha([...unconfirmedNames, ...state.remaining]);
+  // draw replacements
+  const needed = Math.min(5 - confirmed.length, state.remaining.length);
   const pool = [...state.remaining];
-  const count = Math.min(5, pool.length);
   const picked = [];
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < needed; i++) {
     const idx = Math.floor(Math.random() * pool.length);
-    picked.push(pool.splice(idx, 1)[0]);
+    picked.push({ name: pool.splice(idx, 1)[0], confirmed: false });
   }
-  state.candidates = picked;
+  state.candidates = [...confirmed, ...picked];
   state.remaining = pool;
   await saveState(); render();
-  toast('🎲 All candidates rerolled!', 'warning', 2000);
+  const lockedCount = confirmed.length;
+  toast(lockedCount > 0
+    ? `🎲 Rerolled unconfirmed — ${lockedCount} locked candidate${lockedCount > 1 ? 's' : ''} kept`
+    : '🎲 All candidates rerolled!', 'warning', 2500);
 }
 
 async function skipCandidate(name) {
   if (!isAdmin) return;
-  // remove from candidates, send to completed as skipped, draw a replacement if possible
-  state.candidates = (state.candidates || []).filter(n => n !== name);
+  const cand = (state.candidates || []).find(c => (typeof c === 'string' ? c : c.name) === name);
+  if (cand && typeof cand === 'object' && cand.confirmed) {
+    toast('Cannot skip a confirmed candidate', 'error', 2000);
+    return;
+  }
+  state.candidates = (state.candidates || []).filter(c => (typeof c === 'string' ? c : c.name) !== name);
   state.done = [...state.done, { name, status: 'skipped' }];
-  // try to pull in a replacement from remaining
-  const pool = state.remaining.filter(n => !(state.candidates || []).includes(n));
+  // try to pull a replacement
+  const currentNames = (state.candidates || []).map(c => typeof c === 'string' ? c : c.name);
+  const pool = state.remaining.filter(n => !currentNames.includes(n));
   if (pool.length > 0) {
     const idx = Math.floor(Math.random() * pool.length);
     const replacement = pool[idx];
     state.remaining = state.remaining.filter(n => n !== replacement);
-    state.candidates = [...state.candidates, replacement];
+    state.candidates = [...state.candidates, { name: replacement, confirmed: false }];
     await saveState(); render();
-    toast(`🚫 ${name} skipped — ${replacement} added to candidates`, 'warning', 3000);
+    toast(`🚫 ${name} skipped — ${replacement} added`, 'warning', 3000);
     setTimeout(() => {
-      const rows = document.querySelectorAll('.candidate-row');
-      rows.forEach(r => { if (r.querySelector('.candidate-name')?.textContent === replacement) r.classList.add('new-entry'); });
+      document.querySelectorAll('.candidate-row').forEach(r => {
+        if (r.querySelector('.candidate-name')?.textContent === replacement) r.classList.add('new-entry');
+      });
     }, 50);
   } else {
     await saveState(); render();
     toast(`🚫 ${name} skipped`, 'warning', 2000);
   }
+}
+
+async function sendCandidateToCompleted(name) {
+  if (!isAdmin) return;
+  state.candidates = (state.candidates || []).filter(c => (typeof c === 'string' ? c : c.name) !== name);
+  state.done = [...state.done, { name, status: 'done' }];
+  await saveState(); render();
+  toast(`✅ ${name} sent to completed`, 'success', 2000);
 }
 
 async function skipFromRemaining(name) {
@@ -1310,7 +1391,8 @@ async function skipFromRemaining(name) {
 
 async function cancelCandidates() {
   if (!isAdmin) return;
-  state.remaining = sortAlpha([...(state.candidates || []), ...state.remaining]);
+  const names = (state.candidates || []).map(c => typeof c === 'string' ? c : c.name);
+  state.remaining = sortAlpha([...names, ...state.remaining]);
   state.candidates = [];
   state.current = null;
   state.lastCaptain = state.previousCaptain || null;
@@ -1457,25 +1539,37 @@ function render() {
     }
     candidatesGrid.style.display = 'block';
     candidatesGrid.innerHTML = `<div class="candidates-grid">` +
-      candidates.map((n, i) => {
-        const confirmBtn = isAdmin
-          ? `<button class="btn-confirm-captain" onclick="confirmCandidate('${n.replace(/'/g,"\\'")}')">⚓ Captain!</button>`
+      candidates.map((c, i) => {
+        const n = typeof c === 'string' ? c : c.name;
+        const confirmed = typeof c === 'object' && c.confirmed;
+        const ns = n.replace(/'/g, "\\'");
+        const rowClass = confirmed ? 'candidate-row confirmed-row' : 'candidate-row';
+        if (!isAdmin) {
+          return `<div class="${rowClass}">
+            <span class="candidate-num">${i + 1}</span>
+            <span class="candidate-name">${n}</span>
+            ${confirmed ? '<span class="badge badge-done" style="font-size:0.6rem;">✅ Confirmed</span>' : ''}
+          </div>`;
+        }
+        const confirmToggleBtn = `<button class="btn-confirm-toggle ${confirmed ? 'confirmed' : ''}" title="${confirmed ? 'Unconfirm' : 'Mark confirmed'}" onclick="confirmCandidate('${ns}')">${confirmed ? '✅' : '☐'}</button>`;
+        const captainBtn = `<button class="btn-confirm-captain" title="Set as Captain of the Day" onclick="setCaptainFromConfirmed('${ns}')">⚓</button>`;
+        const rerollBtn = !confirmed && state.remaining.length > 0
+          ? `<button class="btn-reroll" title="Reroll" onclick="rerollCandidate('${ns}')">🎲</button>`
           : '';
-        const rerollBtn = isAdmin && state.remaining.length > 0
-          ? `<button class="btn-reroll" title="Reroll" onclick="rerollCandidate('${n.replace(/'/g,"\\'")}')">🎲</button>`
+        const sendDoneBtn = `<button class="btn-move-done" title="Send to completed" onclick="sendCandidateToCompleted('${ns}')">✓</button>`;
+        const skipBtn = !confirmed
+          ? `<button class="btn-skip-candidate" title="Skip" onclick="skipCandidate('${ns}')">🚫</button>`
           : '';
-        const skipBtn = isAdmin
-          ? `<button class="btn-skip-candidate" title="Skip to completed" onclick="skipCandidate('${n.replace(/'/g,"\\'")}')">🚫</button>`
-          : '';
-        return `<div class="candidate-row">
+        return `<div class="${rowClass}">
           <span class="candidate-num">${i + 1}</span>
           <span class="candidate-name">${n}</span>
-          ${skipBtn}${rerollBtn}${confirmBtn}
+          ${confirmToggleBtn}${skipBtn}${rerollBtn}${sendDoneBtn}${captainBtn}
         </div>`;
       }).join('') +
     `</div>`;
-    const rerollAllBtn = isAdmin && state.remaining.length > 0
-      ? `<button class="btn-skip" onclick="rerollAllCandidates()">🎲 Reroll All</button>`
+    const confirmedCount = candidates.filter(c => typeof c === 'object' && c.confirmed).length;
+    const rerollAllBtn = isAdmin
+      ? `<button class="btn-skip" onclick="rerollAllCandidates()">🎲 Reroll Unconfirmed</button>`
       : '';
     const cancelBtn = isAdmin
       ? `<button class="btn-cancel" onclick="cancelCandidates()">✕ Discard all</button>`
@@ -1483,8 +1577,11 @@ function render() {
     const topUpBtn = isAdmin && state.remaining.length > 0 && candidates.length < 5
       ? `<button class="btn-primary" onclick="pickCaptain()">⛵ Top up to 5</button>`
       : '';
+    const confirmedNote = confirmedCount > 0
+      ? `<span style="font-size:0.72rem;color:var(--mint-dark);font-weight:800;">🔒 ${confirmedCount} locked</span>`
+      : '';
     actionRow.innerHTML = isAdmin
-      ? `${rerollAllBtn}${topUpBtn}${cancelBtn}`
+      ? `${rerollAllBtn}${topUpBtn}${cancelBtn}${confirmedNote}`
       : '<span style="font-size:0.8rem;color:var(--muted);font-weight:700;">Waiting for captain selection…</span>';
 
   } else if (state.lastCaptain) {
