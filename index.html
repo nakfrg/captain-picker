@@ -1319,6 +1319,20 @@ async function setCaptainFromConfirmed(name) {
   toast(`⚓ ${name} is Captain of the Day!`, 'success', 3500);
 }
 
+async function completeCaptain() {
+  if (!isAdmin || !state.lastCaptain) return;
+  const name = state.lastCaptain;
+  // ensure they're in the done list (they normally already are)
+  if (!state.done.some(d => d.name === name)) {
+    state.done = [...state.done, { name, status: 'done' }];
+  }
+  // clear them off the captain card
+  state.lastCaptain = null;
+  state.captainSetAt = null;
+  await saveState(); render();
+  toast(`✅ ${name} marked complete`, 'success', 2500);
+}
+
 async function rerollCandidate(name) {
   if (!isAdmin) return;
   if (state.remaining.length === 0) return;
@@ -1629,7 +1643,8 @@ function render() {
     nameEl.classList.remove('empty');
     if (timestampEl) timestampEl.textContent = state.captainSetAt ? `Set ${timeAgo(state.captainSetAt)}` : '';
     actionRow.innerHTML = isAdmin
-      ? `<button class="btn-primary" onclick="pickCaptain()" ${state.team.length === 0 ? 'disabled' : ''}>⛵ Pick Candidates</button>`
+      ? `<button class="btn-done" onclick="completeCaptain()">✅ Mark Complete</button>
+         <button class="btn-primary" onclick="pickCaptain()" ${state.team.length === 0 ? 'disabled' : ''}>⛵ Pick Candidates</button>`
       : '';
 
   } else {
