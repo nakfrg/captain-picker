@@ -566,6 +566,39 @@ button:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 }
 .skull-mark { font-size: 0.9em; }
 
+/* confirmation order number badge */
+.candidate-order {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--white);
+  background: var(--mint-dark);
+  min-width: 20px; height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* reorder up/down arrows */
+.reorder-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex-shrink: 0;
+}
+.btn-reorder {
+  background: var(--foam);
+  color: var(--ocean-deep);
+  border: 1px solid var(--foam-mid);
+  font-size: 0.55rem;
+  padding: 0.1rem 0.35rem;
+  line-height: 1;
+  border-radius: 4px;
+}
+.btn-reorder:hover:not(:disabled) { background: var(--white); border-color: var(--ocean-light); }
+.btn-reorder:disabled { opacity: 0.25; cursor: not-allowed; }
+
 /* row overflow menu (mobile tidiness) */
 .row-menu { position: relative; flex-shrink: 0; }
 .btn-menu-toggle {
@@ -1438,15 +1471,43 @@ async function pickCaptain() {
 
 async function confirmCandidate(name) {
   if (!isAdmin) return;
-  // Toggle confirmed state on the candidate — don't remove them yet
+  // determine next order number (max existing + 1)
+  const maxOrder = Math.max(0, ...(state.candidates || []).map(c => (typeof c === 'object' && c.confirmOrder) || 0));
   state.candidates = (state.candidates || []).map(c => {
     const n = typeof c === 'string' ? c : c.name;
-    if (n === name) return { name: n, confirmed: !(typeof c === 'object' && c.confirmed) };
-    return typeof c === 'string' ? { name: c, confirmed: false } : c;
+    const obj = typeof c === 'string' ? { name: c, confirmed: false } : { ...c };
+    if (n === name) {
+      if (obj.confirmed) {
+        // unconfirming — clear order
+        obj.confirmed = false;
+        delete obj.confirmOrder;
+      } else {
+        // confirming — assign next order
+        obj.confirmed = true;
+        obj.confirmOrder = maxOrder + 1;
+      }
+    }
+    return obj;
   });
   await saveState(); render();
   const isNowConfirmed = state.candidates.find(c => c.name === name)?.confirmed;
   toast(isNowConfirmed ? `✅ ${name} confirmed` : `↩ ${name} unconfirmed`, isNowConfirmed ? 'success' : 'warning', 1800);
+}
+
+async function moveConfirmedOrder(name, direction) {
+  if (!isAdmin) return;
+  // get confirmed candidates sorted by current order
+  const confirmed = (state.candidates || [])
+    .filter(c => typeof c === 'object' && c.confirmed)
+    .sort((a, b) => (a.confirmOrder || 0) - (b.confirmOrder || 0));
+  const idx = confirmed.findIndex(c => c.name === name);
+  if (idx === -1) return;
+  const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if (swapIdx < 0 || swapIdx >= confirmed.length) return;
+  // swap the confirmOrder values
+  const a = confirmed[idx], b = confirmed[swapIdx];
+  const tmp = a.confirmOrder; a.confirmOrder = b.confirmOrder; b.confirmOrder = tmp;
+  await saveState(); render();
 }
 
 async function setCaptainFromConfirmed(name) {
@@ -1703,7 +1764,7 @@ function render() {
   const candidates = state.candidates || [];
 
   if (candidates.length > 0) {
-    captainLabel.textContent = '⚓ Choose Today\'s Captain ⚓';
+    captainLabel.textContent = '⚓ Next Captain ⚓';
     nameEl.style.display = state.lastCaptain ? 'flex' : 'none';
     if (state.lastCaptain) {
       nameEl.textContent = state.lastCaptain;
@@ -1713,16 +1774,27 @@ function render() {
       if (timestampEl) timestampEl.textContent = '';
     }
     candidatesGrid.style.display = 'block';
+    // sort: confirmed first (by confirmOrder), then unconfirmed in their existing order
+    const confirmedList = candidates
+      .filter(c => typeof c === 'object' && c.confirmed)
+      .sort((a, b) => (a.confirmOrder || 0) - (b.confirmOrder || 0));
+    const unconfirmedList = candidates.filter(c => !(typeof c === 'object' && c.confirmed));
+    const orderedCandidates = [...confirmedList, ...unconfirmedList];
     candidatesGrid.innerHTML = `<div class="candidates-grid">` +
-      candidates.map((c, i) => {
+      orderedCandidates.map((c, i) => {
         const n = typeof c === 'string' ? c : c.name;
         const confirmed = typeof c === 'object' && c.confirmed;
         const ns = n.replace(/'/g, "\\'");
         const rowClass = confirmed ? 'candidate-row confirmed-row' : 'candidate-row';
         const skull = hasSkull(n) ? ' <span class="skull-mark" title="Has a skull">💀</span>' : '';
+        // confirmed candidates show their response-order number; unconfirmed show a dash
+        const confirmedIdx = confirmed ? confirmedList.findIndex(x => x.name === n) : -1;
+        const orderLabel = confirmed
+          ? `<span class="candidate-order" title="Confirmation order">${confirmedIdx + 1}</span>`
+          : `<span class="candidate-num">–</span>`;
         if (!isAdmin) {
           return `<div class="${rowClass}">
-            <span class="candidate-num">${i + 1}</span>
+            ${orderLabel}
             <span class="candidate-name">${n}${skull}</span>
             ${confirmed ? '<span class="badge badge-done" style="font-size:0.6rem;">✅ Confirmed</span>' : ''}
           </div>`;
@@ -1736,11 +1808,17 @@ function render() {
         const skipBtn = !confirmed
           ? `<button class="btn-skip-candidate" title="Skip" onclick="skipCandidate('${ns}')">🚫</button>`
           : '';
-        // primary action (confirm toggle + captain) always visible; secondary actions in a menu for mobile tidiness
+        // reorder arrows only for confirmed candidates
+        const reorderBtns = confirmed
+          ? `<div class="reorder-btns">
+              <button class="btn-reorder" title="Move up" onclick="moveConfirmedOrder('${ns}','up')" ${confirmedIdx === 0 ? 'disabled' : ''}>▲</button>
+              <button class="btn-reorder" title="Move down" onclick="moveConfirmedOrder('${ns}','down')" ${confirmedIdx === confirmedList.length - 1 ? 'disabled' : ''}>▼</button>
+            </div>`
+          : '';
         return `<div class="${rowClass}">
-          <span class="candidate-num">${i + 1}</span>
+          ${orderLabel}
           <span class="candidate-name">${n}${skull}</span>
-          ${confirmToggleBtn}${captainBtn}
+          ${reorderBtns}${confirmToggleBtn}${captainBtn}
           <div class="row-menu">
             <button class="btn-menu-toggle" title="More actions" onclick="toggleRowMenu(this)">⋯</button>
             <div class="row-menu-items">${skipBtn}${rerollBtn}${sendDoneBtn}</div>
