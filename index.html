@@ -1771,8 +1771,11 @@ function render() {
     const confirmedNote = confirmedCount > 0
       ? `<span style="font-size:0.72rem;color:var(--mint-dark);font-weight:800;">🔒 ${confirmedCount} locked</span>`
       : '';
+    const completeBtn = isAdmin && state.lastCaptain
+      ? `<button class="btn-done" onclick="completeCaptain()">✅ Mark Captain Complete</button>`
+      : '';
     actionRow.innerHTML = isAdmin
-      ? `${copyBtn}${rerollAllBtn}${topUpBtn}${cancelBtn}${confirmedNote}`
+      ? `${completeBtn}${copyBtn}${rerollAllBtn}${topUpBtn}${cancelBtn}${confirmedNote}`
       : '<span style="font-size:0.8rem;color:var(--muted);font-weight:700;">Waiting for captain selection…</span>';
 
   } else if (state.lastCaptain) {
