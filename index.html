@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NullZero — Captain of the Day</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%93%3C/text%3E%3C/svg%3E" />
 <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Nunito:wght@400;600;700;800&family=Righteous&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -544,6 +545,95 @@ button:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
   box-shadow: 0 3px 0 var(--mint-dark);
 }
 
+/* skull button */
+.btn-skull {
+  background: transparent;
+  border: 2px solid var(--foam-mid);
+  font-size: 0.75rem; padding: 0.28rem 0.5rem;
+  flex-shrink: 0;
+  filter: grayscale(1) opacity(0.5);
+  transition: all 0.12s;
+}
+.btn-skull:hover:not(:disabled) {
+  filter: grayscale(0) opacity(1);
+  border-color: var(--coral);
+  transform: translateY(-1px);
+}
+.btn-skull.has-skull {
+  filter: grayscale(0) opacity(1);
+  border-color: var(--coral);
+  background: #ffe8e8;
+}
+.skull-mark { font-size: 0.9em; }
+
+/* row overflow menu (mobile tidiness) */
+.row-menu { position: relative; flex-shrink: 0; }
+.btn-menu-toggle {
+  background: var(--foam);
+  color: var(--ocean-deep);
+  border: 2px solid var(--foam-mid);
+  font-size: 0.85rem; padding: 0.2rem 0.5rem;
+  line-height: 1; font-weight: 800;
+}
+.btn-menu-toggle:hover { background: var(--white); }
+.row-menu-items {
+  display: none;
+  position: absolute;
+  right: 0; top: calc(100% + 4px);
+  background: var(--white);
+  border: 2px solid var(--foam-mid);
+  border-radius: var(--radius-xs);
+  padding: 0.35rem;
+  gap: 0.35rem;
+  z-index: 20;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+}
+.row-menu.open .row-menu-items { display: flex; }
+
+/* confirmation progress bar */
+.confirm-progress { margin-top: 0.8rem; }
+.confirm-progress-label {
+  display: flex; justify-content: space-between;
+  font-size: 0.65rem; font-weight: 800;
+  color: var(--ocean-deep); text-transform: uppercase;
+  letter-spacing: 0.06em; margin-bottom: 0.3rem;
+}
+.confirm-progress-track {
+  width: 100%; height: 7px;
+  background: var(--foam-mid);
+  border-radius: 99px; overflow: hidden;
+}
+.confirm-progress-fill {
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--mint), var(--mint-dark));
+  transition: width 0.4s ease;
+}
+
+/* realtime sync flash */
+#syncFlash {
+  position: fixed;
+  top: 1rem; left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: var(--ocean);
+  color: var(--white);
+  font-size: 0.75rem; font-weight: 800;
+  padding: 0.4rem 1rem;
+  border-radius: 99px;
+  z-index: 250;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+}
+#syncFlash.show {
+  animation: sync-flash 1.6s ease-out;
+}
+@keyframes sync-flash {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+  15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  80%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+}
+
 .btn-restore {
   background: var(--foam);
   color: var(--ocean);
@@ -878,6 +968,7 @@ footer {
 <div class="sparkle" style="left:65%;top:70%;animation-duration:3.5s;animation-delay:2s;"></div>
 
 <div id="toastContainer"></div>
+<div id="syncFlash">🔄 Updated</div>
 
 <!-- Password overlay -->
 <div id="pwOverlay">
@@ -1023,6 +1114,7 @@ footer {
 const SUPABASE_URL = 'https://ypimsubvdyebewxzlorr.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwaW1zdWJ2ZHllYmV3eHpsb3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMjQ0MTcsImV4cCI6MjA5MjkwMDQxN30.g1MnxpzLaiqgOwPT15iqlCVJtNNlzhdDWIaTd097TEs';
 const EDGE_BASE = `${SUPABASE_URL}/functions/v1`;
+const CANDIDATE_COUNT = 5; // how many candidates to draw each round
 
 let supabaseClient = null;
 let state = null;
@@ -1103,7 +1195,12 @@ async function startApp(url, key) {
   const { data, error } = await supabaseClient.from('guild_state').select('data').eq('id', 'main').single();
   if (error) {
     document.getElementById('loadingScreen').innerHTML =
-      `<div style="color:#ff6b6b;font-size:0.9rem;text-align:center;font-weight:700;">⚠️ Connection failed<br><span style="color:var(--foam-mid);font-size:0.75rem;">${error.message}</span></div>`;
+      `<div style="text-align:center;max-width:320px;">
+        <div style="font-size:2.5rem;margin-bottom:0.5rem;">🌊⚓</div>
+        <div style="color:#ff6b6b;font-size:1rem;font-weight:800;margin-bottom:0.4rem;">Lost at sea!</div>
+        <div style="color:var(--foam-mid);font-size:0.8rem;font-weight:600;margin-bottom:1rem;">Couldn't connect to the guild log. Check your connection and try again.</div>
+        <button class="btn-primary" onclick="location.reload()">🔄 Retry</button>
+      </div>`;
     return;
   }
   state = migrateDone(data.data);
@@ -1117,6 +1214,13 @@ async function startApp(url, key) {
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'guild_state' }, payload => {
       state = migrateDone(payload.new.data);
       render();
+      // brief flash so people notice a live update happened
+      const flash = document.getElementById('syncFlash');
+      if (flash) {
+        flash.classList.remove('show');
+        void flash.offsetWidth;
+        flash.classList.add('show');
+      }
     })
     .subscribe();
 
@@ -1128,8 +1232,53 @@ function migrateDone(s) {
   s.done = (s.done || []).map(d => typeof d === 'string' ? { name: d, status: 'done' } : d);
   // normalise candidates to objects with confirmed flag
   s.candidates = (s.candidates || []).map(c => typeof c === 'string' ? { name: c, confirmed: false } : c);
+  // skulls: map of name -> true (1 skull max)
+  if (!s.skulls || Array.isArray(s.skulls)) s.skulls = {};
   return s;
 }
+
+function hasSkull(name) {
+  return !!(state.skulls && state.skulls[name]);
+}
+
+async function toggleSkull(name) {
+  if (!isAdmin) return;
+  if (!state.skulls) state.skulls = {};
+  if (state.skulls[name]) {
+    delete state.skulls[name];
+    await saveState(); render();
+    toast(`💀 Skull removed from ${name}`, 'warning', 1800);
+  } else {
+    state.skulls[name] = true;
+    await saveState(); render();
+    toast(`💀 Skull added to ${name}`, 'warning', 1800);
+  }
+}
+
+function copyCandidates() {
+  const names = (state.candidates || []).map(c => typeof c === 'string' ? c : c.name);
+  if (names.length === 0) return;
+  const text = names.join('\n');
+  navigator.clipboard.writeText(text).then(
+    () => toast('📋 Candidate names copied!', 'success', 2000),
+    () => toast('Could not copy to clipboard', 'error', 2000)
+  );
+}
+
+function toggleRowMenu(btn) {
+  const menu = btn.parentElement;
+  const wasOpen = menu.classList.contains('open');
+  // close any other open menus
+  document.querySelectorAll('.row-menu.open').forEach(m => m.classList.remove('open'));
+  if (!wasOpen) menu.classList.add('open');
+}
+
+// close row menus when clicking elsewhere
+document.addEventListener('click', e => {
+  if (!e.target.closest('.row-menu')) {
+    document.querySelectorAll('.row-menu.open').forEach(m => m.classList.remove('open'));
+  }
+});
 
 async function saveState() {
   setSaving(true);
@@ -1268,15 +1417,12 @@ async function pickCaptain() {
     setTimeout(() => document.getElementById('cycleBanner').style.display = 'none', 4500);
   }
   state.previousCaptain = state.lastCaptain || null;
-  // top up candidates to 5 from remaining
-  const existing = (state.candidates || []).filter(c => typeof c === 'object' && c.confirmed); // keep confirmed only when topping up after a pick
-  const needed = Math.max(0, 5 - (state.candidates || []).length);
-  // if we already have 5, just top up confirmed slots
+  // top up candidates to CANDIDATE_COUNT from remaining (keeps existing ones)
   const allExisting = state.candidates || [];
-  const needed2 = Math.max(0, 5 - allExisting.length);
+  const needed = Math.max(0, CANDIDATE_COUNT - allExisting.length);
   const pool = [...state.remaining];
   const picked = [];
-  for (let i = 0; i < Math.min(needed2, pool.length); i++) {
+  for (let i = 0; i < Math.min(needed, pool.length); i++) {
     const idx = Math.floor(Math.random() * pool.length);
     picked.push(pool.splice(idx, 1)[0]);
   }
@@ -1378,7 +1524,7 @@ async function rerollAllCandidates() {
   // return unconfirmed to remaining
   state.remaining = sortAlpha([...unconfirmedNames, ...state.remaining]);
   // draw replacements
-  const needed = Math.min(5 - confirmed.length, state.remaining.length);
+  const needed = Math.min(CANDIDATE_COUNT - confirmed.length, state.remaining.length);
   const pool = [...state.remaining];
   const picked = [];
   for (let i = 0; i < needed; i++) {
@@ -1450,28 +1596,6 @@ async function cancelCandidates() {
   state.previousCaptain = null;
   await saveState(); render();
   toast('↩ Candidates returned to pool', 'warning', 2000);
-}
-
-async function skipBack() {
-  if (!isAdmin || !state.current) return;
-  state.remaining = shuffle([...state.remaining, state.current]);
-  state.current = null;
-  await saveState(); render();
-}
-
-async function markDone() {
-  if (!isAdmin || !state.current) return;
-  state.done = [...state.done, { name: state.current, status: 'done' }];
-  state.lastCaptain = state.current;
-  state.current = null;
-  await saveState(); render();
-}
-
-async function skipToDone() {
-  if (!isAdmin || !state.current) return;
-  state.done = [...state.done, { name: state.current, status: 'skipped' }];
-  state.current = null;
-  await saveState(); render();
 }
 
 async function restoreToRemaining(name) {
@@ -1595,10 +1719,11 @@ function render() {
         const confirmed = typeof c === 'object' && c.confirmed;
         const ns = n.replace(/'/g, "\\'");
         const rowClass = confirmed ? 'candidate-row confirmed-row' : 'candidate-row';
+        const skull = hasSkull(n) ? ' <span class="skull-mark" title="Has a skull">💀</span>' : '';
         if (!isAdmin) {
           return `<div class="${rowClass}">
             <span class="candidate-num">${i + 1}</span>
-            <span class="candidate-name">${n}</span>
+            <span class="candidate-name">${n}${skull}</span>
             ${confirmed ? '<span class="badge badge-done" style="font-size:0.6rem;">✅ Confirmed</span>' : ''}
           </div>`;
         }
@@ -1611,28 +1736,43 @@ function render() {
         const skipBtn = !confirmed
           ? `<button class="btn-skip-candidate" title="Skip" onclick="skipCandidate('${ns}')">🚫</button>`
           : '';
+        // primary action (confirm toggle + captain) always visible; secondary actions in a menu for mobile tidiness
         return `<div class="${rowClass}">
           <span class="candidate-num">${i + 1}</span>
-          <span class="candidate-name">${n}</span>
-          ${confirmToggleBtn}${skipBtn}${rerollBtn}${sendDoneBtn}${captainBtn}
+          <span class="candidate-name">${n}${skull}</span>
+          ${confirmToggleBtn}${captainBtn}
+          <div class="row-menu">
+            <button class="btn-menu-toggle" title="More actions" onclick="toggleRowMenu(this)">⋯</button>
+            <div class="row-menu-items">${skipBtn}${rerollBtn}${sendDoneBtn}</div>
+          </div>
         </div>`;
       }).join('') +
     `</div>`;
     const confirmedCount = candidates.filter(c => typeof c === 'object' && c.confirmed).length;
+    // confirmation progress (#5)
+    const progressPct = candidates.length > 0 ? Math.round((confirmedCount / candidates.length) * 100) : 0;
+    const progressBar = `<div class="confirm-progress">
+      <div class="confirm-progress-label"><span>Confirmed</span><span>${confirmedCount} / ${candidates.length}</span></div>
+      <div class="confirm-progress-track"><div class="confirm-progress-fill" style="width:${progressPct}%"></div></div>
+    </div>`;
+    candidatesGrid.insertAdjacentHTML('beforeend', progressBar);
     const rerollAllBtn = isAdmin
       ? `<button class="btn-skip" onclick="rerollAllCandidates()">🎲 Reroll Unconfirmed</button>`
+      : '';
+    const copyBtn = isAdmin
+      ? `<button class="btn-skip" onclick="copyCandidates()">📋 Copy names</button>`
       : '';
     const cancelBtn = isAdmin
       ? `<button class="btn-cancel" onclick="cancelCandidates()">✕ Discard all</button>`
       : '';
-    const topUpBtn = isAdmin && state.remaining.length > 0 && candidates.length < 5
-      ? `<button class="btn-primary" onclick="pickCaptain()">⛵ Top up to 5</button>`
+    const topUpBtn = isAdmin && state.remaining.length > 0 && candidates.length < CANDIDATE_COUNT
+      ? `<button class="btn-primary" onclick="pickCaptain()">⛵ Top up to ${CANDIDATE_COUNT}</button>`
       : '';
     const confirmedNote = confirmedCount > 0
       ? `<span style="font-size:0.72rem;color:var(--mint-dark);font-weight:800;">🔒 ${confirmedCount} locked</span>`
       : '';
     actionRow.innerHTML = isAdmin
-      ? `${rerollAllBtn}${topUpBtn}${cancelBtn}${confirmedNote}`
+      ? `${copyBtn}${rerollAllBtn}${topUpBtn}${cancelBtn}${confirmedNote}`
       : '<span style="font-size:0.8rem;color:var(--muted);font-weight:700;">Waiting for captain selection…</span>';
 
   } else if (state.lastCaptain) {
@@ -1669,13 +1809,18 @@ function render() {
   remainingList.innerHTML = filteredRemaining.length === 0
     ? `<div class="empty-state">${searchRemaining ? 'No crew match your search.' : 'No crew remaining this voyage.'}</div>`
     : filteredRemaining.map((n, i) => {
+        const ns = n.replace(/'/g,"\\'");
+        const skull = hasSkull(n) ? ' <span class="skull-mark" title="Has a skull">💀</span>' : '';
+        const skullBtn = isAdmin
+          ? `<button class="btn-skull ${hasSkull(n) ? 'has-skull' : ''}" title="${hasSkull(n) ? 'Remove skull' : 'Add skull'}" onclick="toggleSkull('${ns}')">💀</button>`
+          : '';
         const moveBtn = isAdmin
-          ? `<button class="btn-move-done" title="Mark done" onclick="moveToCompleted('${n.replace(/'/g,"\\'")}')">✓</button>`
+          ? `<button class="btn-move-done" title="Mark done" onclick="moveToCompleted('${ns}')">✓</button>`
           : '';
         const skipBtn = isAdmin
-          ? `<button class="btn-skip-candidate" title="Skip to completed" onclick="skipFromRemaining('${n.replace(/'/g,"\\'")}')">🚫</button>`
+          ? `<button class="btn-skip-candidate" title="Skip to completed" onclick="skipFromRemaining('${ns}')">🚫</button>`
           : '';
-        return `<div class="list-item"><span class="list-num">${i+1}</span><span class="list-name">${n}</span>${skipBtn}${moveBtn}</div>`;
+        return `<div class="list-item"><span class="list-num">${i+1}</span><span class="list-name">${n}${skull}</span>${skullBtn}${skipBtn}${moveBtn}</div>`;
       }).join('');
 
   // done list
@@ -1689,9 +1834,10 @@ function render() {
         const restoreBtn = isAdmin
           ? `<button class="btn-restore" onclick="restoreToRemaining('${d.name.replace(/'/g,"\\'")}')">↩</button>`
           : '';
+        const skull = hasSkull(d.name) ? ' <span class="skull-mark" title="Has a skull">💀</span>' : '';
         return `<div class="list-item done-item">
           <span class="list-num">${i+1}</span>
-          <span class="list-name">${d.name}</span>
+          <span class="list-name">${d.name}${skull}</span>
           ${badge}${restoreBtn}
         </div>`;
       }).join('');
@@ -1707,8 +1853,9 @@ function render() {
     manageList.innerHTML = filteredTeam.length === 0
       ? `<div class="empty-state">${searchManage ? 'No crew match your search.' : 'No crew yet. Add some above!'}</div>`
       : filteredTeam.map(n => {
-          const isCurrent = state.current === n;
-          const isCandidate = (state.candidates || []).includes(n);
+          const ns = n.replace(/'/g,"\\'");
+          const isCurrent = state.lastCaptain === n;
+          const isCandidate = (state.candidates || []).some(c => (typeof c === 'string' ? c : c.name) === n);
           const inDone = state.done.find(d => d.name === n);
           let badge = '';
           if (isCurrent) badge = `<span class="badge" style="background:#fff8d4;color:#8a6000;border:2px solid #f5d43a;">Today ⚓</span>`;
@@ -1717,7 +1864,9 @@ function render() {
             ? `<span class="badge badge-skipped">Skipped</span>`
             : `<span class="badge badge-done">Done</span>`;
           else badge = `<span class="badge badge-queued">Queued</span>`;
-          return `<div class="list-item"><span class="list-name">${n}</span>${badge}<button class="btn-danger" onclick="removePerson('${n.replace(/'/g,"\\'")}')">Remove</button></div>`;
+          const skull = hasSkull(n) ? ' <span class="skull-mark" title="Has a skull">💀</span>' : '';
+          const skullBtn = `<button class="btn-skull ${hasSkull(n) ? 'has-skull' : ''}" title="${hasSkull(n) ? 'Remove skull' : 'Add skull'}" onclick="toggleSkull('${ns}')">💀</button>`;
+          return `<div class="list-item"><span class="list-name">${n}${skull}</span>${badge}${skullBtn}<button class="btn-danger" onclick="removePerson('${ns}')">Remove</button></div>`;
         }).join('');
   }
 }
