@@ -6,7 +6,6 @@
 <title>NullZero — Captain of the Day</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%93%3C/text%3E%3C/svg%3E" />
 <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Nunito:wght@400;600;700;800&family=Righteous&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -162,84 +161,10 @@ body > * { position: relative; z-index: 1; }
 .rope-knot { font-size: 1rem; }
 
 /* ══════════════════════════════════════
-   LOADING
-══════════════════════════════════════ */
-#loadingScreen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  margin-top: 4rem;
-  color: var(--foam-mid);
-  font-size: 0.88rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-.spinner {
-  font-size: 2.4rem;
-  animation: spin 1.4s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ══════════════════════════════════════
-   PASSWORD OVERLAY
-══════════════════════════════════════ */
-#pwOverlay {
-  display: none;
-  position: fixed; inset: 0;
-  background: rgba(10,25,45,0.9);
-  backdrop-filter: blur(6px);
-  z-index: 200;
-  align-items: center;
-  justify-content: center;
-}
-#pwOverlay.open { display: flex; }
-
-.pw-box {
-  background: var(--white);
-  border: 3px solid var(--ocean);
-  border-radius: var(--radius);
-  padding: 2.4rem 2.8rem;
-  width: 100%; max-width: 360px;
-  text-align: center;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.4), 3px 3px 0 var(--ocean-deep);
-  position: relative;
-}
-.pw-box-icon { font-size: 2.4rem; margin-bottom: 0.5rem; }
-.pw-box h2 { font-family: 'Pacifico', cursive; font-size: 1.5rem; color: var(--ocean-deep); margin-bottom: 0.4rem; }
-.pw-box p { font-size: 0.82rem; color: var(--muted); margin-bottom: 1.6rem; line-height: 1.5; }
-.pw-error { font-size: 0.78rem; color: var(--coral); margin-top: 0.6rem; min-height: 1.1rem; font-weight: 700; }
-.pw-row { display: flex; gap: 0.5rem; }
-
-/* ══════════════════════════════════════
    MAIN UI
 ══════════════════════════════════════ */
 #mainUI { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 680px; }
 #mainUI.show { display: flex; }
-
-.status-row { display: flex; justify-content: center; margin-bottom: 1.4rem; }
-
-#adminBadge {
-  display: none; align-items: center; gap: 0.5rem;
-  background: rgba(255,217,61,0.15); border: 2px solid var(--sun);
-  border-radius: 99px; padding: 0.35rem 1.1rem 0.35rem 0.8rem;
-  font-size: 0.78rem; color: var(--sun); font-weight: 800; letter-spacing: 0.04em;
-}
-#adminBadge.show { display: flex; }
-#adminBadge .dot { width: 8px; height: 8px; background: var(--sun); border-radius: 50%; box-shadow: 0 0 8px var(--sun); animation: pulse-dot 1.5s ease-in-out infinite; }
-@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.8)} }
-#adminBadge button { background: transparent; border: none; color: rgba(255,255,255,0.5); font-size: 0.72rem; padding: 0; cursor: pointer; margin-left: 0.4rem; font-family: 'Nunito', sans-serif; font-weight: 600; }
-#adminBadge button:hover { color: var(--white); }
-
-#readonlyNotice {
-  display: flex; align-items: center; gap: 0.5rem;
-  font-size: 0.75rem; color: var(--foam-mid); font-weight: 700; letter-spacing: 0.05em; opacity: 0.8;
-}
-#readonlyNotice button {
-  background: transparent; border: none; color: var(--sun); font-size: 0.75rem;
-  padding: 0; cursor: pointer; text-decoration: underline; font-family: 'Nunito', sans-serif; font-weight: 800;
-}
-#readonlyNotice button:hover { color: var(--white); }
 
 /* ══════════════════════════════════════
    STATS
@@ -355,7 +280,6 @@ body > * { position: relative; z-index: 1; }
 }
 
 .action-row { display: flex; gap: 0.6rem; margin-top: 1.4rem; justify-content: center; flex-wrap: wrap; }
-.saving-indicator { font-size: 0.72rem; color: var(--foam-mid); text-align: center; min-height: 1.1rem; margin-bottom: 0.4rem; font-weight: 700; letter-spacing: 0.04em; }
 
 /* ══════════════════════════════════════
    BUTTONS
@@ -642,31 +566,6 @@ button:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
   transition: width 0.4s ease;
 }
 
-/* realtime sync flash */
-#syncFlash {
-  position: fixed;
-  top: 1rem; left: 50%;
-  transform: translateX(-50%) translateY(-20px);
-  background: var(--ocean);
-  color: var(--white);
-  font-size: 0.75rem; font-weight: 800;
-  padding: 0.4rem 1rem;
-  border-radius: 99px;
-  z-index: 250;
-  opacity: 0;
-  pointer-events: none;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
-}
-#syncFlash.show {
-  animation: sync-flash 1.6s ease-out;
-}
-@keyframes sync-flash {
-  0%   { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-  15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
-  80%  { opacity: 1; transform: translateX(-50%) translateY(0); }
-  100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-}
-
 .btn-restore {
   background: var(--foam);
   color: var(--ocean);
@@ -794,23 +693,6 @@ input::placeholder { color: var(--muted); font-style: italic; }
   background: var(--white); border: 2px solid var(--foam-mid);
   border-radius: var(--radius-xs); padding: 1rem 1.2rem; margin-top: 0.5rem;
   box-shadow: 3px 3px 0 rgba(0,0,0,0.08);
-}
-
-/* ══════════════════════════════════════
-   LOCK BUTTON
-══════════════════════════════════════ */
-#lockBtn {
-  position: fixed; bottom: 1.4rem; right: 1.4rem;
-  background: var(--white); border: 2px solid var(--ocean);
-  border-radius: 99px; color: var(--ocean-deep); font-size: 0.72rem; font-weight: 800;
-  padding: 0.5rem 1.1rem; cursor: pointer; letter-spacing: 0.05em;
-  z-index: 50; box-shadow: 3px 3px 0 var(--ocean-deep);
-  transition: all 0.15s;
-}
-#lockBtn:hover {
-  background: var(--ocean); color: var(--white);
-  transform: translateY(-2px);
-  box-shadow: 3px 5px 0 var(--ocean-deep);
 }
 
 /* ══════════════════════════════════════
@@ -1001,22 +883,6 @@ footer {
 <div class="sparkle" style="left:65%;top:70%;animation-duration:3.5s;animation-delay:2s;"></div>
 
 <div id="toastContainer"></div>
-<div id="syncFlash">🔄 Updated</div>
-
-<!-- Password overlay -->
-<div id="pwOverlay">
-  <div class="pw-box">
-    <div class="pw-box-icon">⚓</div>
-    <h2>Ahoy, Captain!</h2>
-    <p>Enter the secret password to manage the crew rotation.</p>
-    <div class="pw-row">
-      <input type="password" id="pwInput" placeholder="Password…" onkeydown="if(event.key==='Enter')submitPassword()" />
-      <button class="btn-primary" onclick="submitPassword()">Enter</button>
-    </div>
-    <div class="pw-error" id="pwError"></div>
-    <button style="margin-top:1.2rem;background:transparent;border:none;color:var(--muted);font-size:0.75rem;cursor:pointer;text-decoration:underline;font-family:'Nunito',sans-serif;font-weight:700;" onclick="closeOverlay()">Never mind!</button>
-  </div>
-</div>
 
 <!-- Header -->
 <header class="site-header">
@@ -1031,25 +897,8 @@ footer {
   <div class="rope-line"></div>
 </div>
 
-<!-- Loading -->
-<div id="loadingScreen">
-  <div class="spinner">🌀</div>
-  <span>Sailing to your guild…</span>
-</div>
-
 <!-- Main UI -->
 <div id="mainUI">
-
-  <div class="status-row">
-    <div id="adminBadge">
-      <span class="dot"></span>
-      ⚓ Captain Mode
-      <button onclick="logout()">Go ashore</button>
-    </div>
-    <div id="readonlyNotice">
-      🔭 Viewing only &nbsp;·&nbsp; <button onclick="openOverlay()">Captain login</button>
-    </div>
-  </div>
 
   <div class="stats-bar" id="statsBar"></div>
 
@@ -1080,14 +929,12 @@ footer {
     </div>
   </div>
 
-  <div class="saving-indicator" id="savingIndicator"></div>
-
   <!-- Tabs -->
   <div class="tabs-wrapper">
     <div class="tabs">
       <button class="tab active" id="tab-remaining" onclick="switchTab('remaining',event)">🗺 Remaining</button>
       <button class="tab" id="tab-done" onclick="switchTab('done',event)">✅ Completed</button>
-      <button class="tab" id="manageTab" onclick="switchTab('manage',event)" style="display:none;">⚙ Manage Crew</button>
+      <button class="tab" id="manageTab" onclick="switchTab('manage',event)">⚙ Manage Crew</button>
     </div>
 
     <div class="panel active" id="panel-remaining">
@@ -1123,35 +970,32 @@ footer {
       </div>
       <div id="inlineConfirmSlot"></div>
 
-      <div class="section-title" style="margin-top:2rem;">Change password</div>
+      <div class="section-title" style="margin-top:2rem;">Backup &amp; restore</div>
       <div class="change-pw-box">
-        <div style="display:flex;flex-direction:column;gap:0.5rem;">
-          <input type="password" id="currentPw" placeholder="Current password…" style="flex:none;width:100%;" />
-          <input type="password" id="newPw1" placeholder="New password…" style="flex:none;width:100%;" />
-          <input type="password" id="newPw2" placeholder="Confirm new password…" style="flex:none;width:100%;" />
-          <div style="display:flex;justify-content:flex-end;margin-top:0.4rem;">
-            <button class="btn-done" onclick="changePassword()">Update Password</button>
+        <div style="display:flex;flex-direction:column;gap:0.6rem;">
+          <div style="font-size:0.75rem;color:var(--muted);font-weight:700;line-height:1.5;">
+            Data lives in this browser only (localStorage). Export a JSON backup regularly, or import a backup / old Supabase <code>guild_state</code> data blob.
           </div>
-          <div id="pwChangeMsg" style="font-size:0.75rem;min-height:1rem;text-align:right;font-weight:700;"></div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <button class="btn-primary" onclick="exportData()">⬇ Export JSON</button>
+            <button class="btn-done" onclick="document.getElementById('importFile').click()">⬆ Import JSON</button>
+            <input type="file" id="importFile" accept=".json,application/json" style="display:none;" onchange="importData(event)" />
+          </div>
+          <div id="backupMsg" style="font-size:0.75rem;min-height:1rem;font-weight:700;"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <footer>⛵ &nbsp; Created by @nakfrg - DM me on discord if you have any questions &nbsp; ⛵</footer>
+  <footer>⛵ &nbsp; Standalone edition — data stored locally in this browser &nbsp; ⛵</footer>
 </div>
 
-<button id="lockBtn" onclick="openOverlay()" style="display:none;">⚓ Captain Login</button>
-
 <script>
-const SUPABASE_URL = 'https://ypimsubvdyebewxzlorr.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwaW1zdWJ2ZHllYmV3eHpsb3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMjQ0MTcsImV4cCI6MjA5MjkwMDQxN30.g1MnxpzLaiqgOwPT15iqlCVJtNNlzhdDWIaTd097TEs';
-const EDGE_BASE = `${SUPABASE_URL}/functions/v1`;
+const STORAGE_KEY = 'nullzeroCaptainState';
 const CANDIDATE_COUNT = 5; // how many candidates to draw each round
 
-let supabaseClient = null;
 let state = null;
-let isAdmin = false;
+const isAdmin = true; // standalone single-user tool — always full access
 
 // ── toast notifications ──
 function toast(msg, type = 'success', duration = 2800) {
@@ -1165,15 +1009,6 @@ function toast(msg, type = 'success', duration = 2800) {
     el.addEventListener('animationend', () => el.remove());
   }, duration);
 }
-
-// ── keyboard shortcut: A = open admin login ──
-document.addEventListener('keydown', e => {
-  if (e.key === 'a' || e.key === 'A') {
-    const active = document.activeElement;
-    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
-    if (!isAdmin) openOverlay();
-  }
-});
 
 // ── inline confirm dialogs ──
 function showInlineConfirm(message, onConfirm) {
@@ -1219,45 +1054,65 @@ function timeAgo(isoString) {
   return `${days}d ago`;
 }
 
-async function init() {
-  await startApp(SUPABASE_URL, SUPABASE_KEY);
+function defaultState() {
+  return { team: [], remaining: [], done: [], candidates: [], current: null,
+           lastCaptain: null, captainSetAt: null, previousCaptain: null, skulls: {} };
 }
 
-async function startApp(url, key) {
-  supabaseClient = supabase.createClient(url, key);
-  const { data, error } = await supabaseClient.from('guild_state').select('data').eq('id', 'main').single();
-  if (error) {
-    document.getElementById('loadingScreen').innerHTML =
-      `<div style="text-align:center;max-width:320px;">
-        <div style="font-size:2.5rem;margin-bottom:0.5rem;">🌊⚓</div>
-        <div style="color:#ff6b6b;font-size:1rem;font-weight:800;margin-bottom:0.4rem;">Lost at sea!</div>
-        <div style="color:var(--foam-mid);font-size:0.8rem;font-weight:600;margin-bottom:1rem;">Couldn't connect to the guild log. Check your connection and try again.</div>
-        <button class="btn-primary" onclick="location.reload()">🔄 Retry</button>
-      </div>`;
-    return;
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultState();
+    return JSON.parse(raw);
+  } catch(e) {
+    console.error('Failed to load saved state:', e);
+    return defaultState();
   }
-  state = migrateDone(data.data);
-  isAdmin = loadAdminSession();
-  document.getElementById('loadingScreen').style.display = 'none';
+}
+
+function init() {
+  state = migrateDone(loadState());
   document.getElementById('mainUI').classList.add('show');
-  document.getElementById('lockBtn').style.display = 'block';
-
-  supabaseClient
-    .channel('guild_state_changes')
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'guild_state' }, payload => {
-      state = migrateDone(payload.new.data);
-      render();
-      // brief flash so people notice a live update happened
-      const flash = document.getElementById('syncFlash');
-      if (flash) {
-        flash.classList.remove('show');
-        void flash.offsetWidth;
-        flash.classList.add('show');
-      }
-    })
-    .subscribe();
-
   render();
+}
+
+// ── backup & restore ──
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `captain-tracker-backup-${stamp}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('⬇ Backup exported', 'success', 2000);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const msg = document.getElementById('backupMsg');
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      let parsed = JSON.parse(reader.result);
+      // accept a raw guild_state row export ({ id, data }) or the data blob itself
+      if (parsed && parsed.data && parsed.data.team) parsed = parsed.data;
+      if (Array.isArray(parsed) && parsed[0] && parsed[0].data && parsed[0].data.team) parsed = parsed[0].data;
+      if (!parsed || !Array.isArray(parsed.team)) throw new Error('Missing "team" array — not a valid backup.');
+      state = migrateDone(parsed);
+      await saveState(); render();
+      msg.style.color = 'var(--mint-dark)';
+      msg.textContent = `✓ Imported ${state.team.length} crew members.`;
+      toast('⬆ Data imported!', 'success', 2500);
+    } catch(e) {
+      msg.style.color = 'var(--coral)';
+      msg.textContent = '⚠️ Import failed: ' + e.message;
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
 }
 
 function migrateDone(s) {
@@ -1314,115 +1169,10 @@ document.addEventListener('click', e => {
 });
 
 async function saveState() {
-  setSaving(true);
-  const { error } = await supabaseClient.from('guild_state').update({ data: state }).eq('id', 'main');
-  setSaving(false);
-  if (error) alert('Save failed: ' + error.message);
-}
-
-function setSaving(on) {
-  document.getElementById('savingIndicator').textContent = on ? '🌊 Saving…' : '';
-}
-
-function openOverlay() {
-  document.getElementById('pwInput').value = '';
-  document.getElementById('pwError').textContent = '';
-  document.getElementById('pwOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('pwInput').focus(), 80);
-}
-function closeOverlay() { document.getElementById('pwOverlay').classList.remove('open'); }
-
-const ADMIN_SESSION_KEY = 'captainAdminSession';
-const SESSION_DAYS = 15;
-
-function saveAdminSession() {
-  const expiry = Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000;
-  localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({ expiry }));
-}
-
-function loadAdminSession() {
   try {
-    const raw = localStorage.getItem(ADMIN_SESSION_KEY);
-    if (!raw) return false;
-    const { expiry } = JSON.parse(raw);
-    if (Date.now() > expiry) { localStorage.removeItem(ADMIN_SESSION_KEY); return false; }
-    return true;
-  } catch(e) { return false; }
-}
-
-function clearAdminSession() {
-  localStorage.removeItem(ADMIN_SESSION_KEY);
-}
-
-async function submitPassword() {
-  const val = document.getElementById('pwInput').value;
-  const errEl = document.getElementById('pwError');
-  const btn = document.querySelector('#pwOverlay .btn-primary');
-  btn.disabled = true;
-  btn.textContent = 'Checking…';
-  try {
-    const res = await fetch(`${EDGE_BASE}/verify-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
-      body: JSON.stringify({ password: val }),
-    });
-    const { ok } = await res.json();
-    if (ok) {
-      isAdmin = true;
-      saveAdminSession();
-      closeOverlay(); render();
-    } else {
-      errEl.textContent = '🚫 Wrong password, landlubber!';
-      document.getElementById('pwInput').value = '';
-      document.getElementById('pwInput').focus();
-    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch(e) {
-    errEl.textContent = '⚠️ Could not reach server. Try again.';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Enter';
-  }
-}
-
-function logout() {
-  isAdmin = false;
-  clearAdminSession();
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelector('.tab').classList.add('active');
-  document.getElementById('panel-remaining').classList.add('active');
-  render();
-}
-async function changePassword() {
-  const current = document.getElementById('currentPw').value.trim();
-  const p1 = document.getElementById('newPw1').value.trim();
-  const p2 = document.getElementById('newPw2').value.trim();
-  const msg = document.getElementById('pwChangeMsg');
-  if (!current) { msg.style.color = 'var(--coral)'; msg.textContent = 'Enter your current password.'; return; }
-  if (!p1) { msg.style.color = 'var(--coral)'; msg.textContent = 'New password cannot be empty!'; return; }
-  if (p1 !== p2) { msg.style.color = 'var(--coral)'; msg.textContent = "Passwords don't match!"; return; }
-  msg.style.color = 'var(--muted)'; msg.textContent = 'Updating…';
-  try {
-    const res = await fetch(`${EDGE_BASE}/change-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
-      body: JSON.stringify({ currentPassword: current, newPassword: p1 }),
-    });
-    const { ok, error } = await res.json();
-    if (ok) {
-      document.getElementById('currentPw').value = '';
-      document.getElementById('newPw1').value = '';
-      document.getElementById('newPw2').value = '';
-      msg.style.color = 'var(--mint-dark)';
-      msg.textContent = '✓ Password updated!';
-      setTimeout(() => msg.textContent = '', 3000);
-    } else {
-      msg.style.color = 'var(--coral)';
-      msg.textContent = error || 'Failed to update password.';
-    }
-  } catch(e) {
-    msg.style.color = 'var(--coral)';
-    msg.textContent = '⚠️ Could not reach server.';
+    alert('Save failed: ' + e.message);
   }
 }
 
@@ -1455,7 +1205,8 @@ async function pickCaptain() {
   const needed = Math.max(0, CANDIDATE_COUNT - allExisting.length);
   const pool = [...state.remaining];
   const picked = [];
-  for (let i = 0; i < Math.min(needed, pool.length); i++) {
+  const drawCount = Math.min(needed, pool.length);
+  for (let i = 0; i < drawCount; i++) {
     const idx = Math.floor(Math.random() * pool.length);
     picked.push(pool.splice(idx, 1)[0]);
   }
@@ -1723,18 +1474,6 @@ async function moveToCompleted(name) {
 
 function render() {
   if (!state) return;
-
-  if (isAdmin) {
-    document.getElementById('adminBadge').classList.add('show');
-    document.getElementById('readonlyNotice').style.display = 'none';
-    document.getElementById('lockBtn').style.display = 'none';
-    document.getElementById('manageTab').style.display = '';
-  } else {
-    document.getElementById('adminBadge').classList.remove('show');
-    document.getElementById('readonlyNotice').style.display = 'flex';
-    document.getElementById('lockBtn').style.display = 'block';
-    document.getElementById('manageTab').style.display = 'none';
-  }
 
   // stats
   document.getElementById('statsBar').innerHTML = `
