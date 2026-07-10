@@ -1731,17 +1731,37 @@ const LANE_W = SHIP_W + LANE_GAP;
 // ever share a lane — so they can never collide, even when overtaking.
 const occupiedLanes = new Set();
 
+const CONTENT_W = 680;         // must match #mainUI max-width
+const CENTER_WEIGHT = 0.12;    // how often center lanes get picked vs edge lanes (1 = equal)
+
 function rand(min, max) { return min + Math.random() * (max - min); }
 
 function laneCount() {
   return Math.max(1, Math.floor(window.innerWidth / LANE_W));
 }
 
+// A lane is "behind content" if its middle sits within the centered content
+// column (plus a little padding). Those lanes get a low pick weight so ships
+// mostly sail up the margins instead of behind the text.
+function laneWeight(lane) {
+  const laneMid = lane * LANE_W + LANE_W / 2;
+  const half = CONTENT_W / 2 + 20;
+  const center = window.innerWidth / 2;
+  return Math.abs(laneMid - center) < half ? CENTER_WEIGHT : 1;
+}
+
 function pickFreeLane() {
   const free = [];
   for (let i = 0; i < laneCount(); i++) if (!occupiedLanes.has(i)) free.push(i);
   if (free.length === 0) return null;
-  return free[Math.floor(Math.random() * free.length)];
+  // weighted random: edge lanes are ~8× more likely than center lanes
+  const weights = free.map(laneWeight);
+  let roll = Math.random() * weights.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < free.length; i++) {
+    roll -= weights[i];
+    if (roll <= 0) return free[i];
+  }
+  return free[free.length - 1];
 }
 
 // Launch (or relaunch) a ship on a fresh voyage. All randomness is applied
