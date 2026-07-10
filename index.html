@@ -54,17 +54,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Animated ocean waves at the bottom */
-body::after {
-  content: '';
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  height: 120px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 120'%3E%3Cpath fill='%231a5f8a' fill-opacity='0.5' d='M0,64L48,69.3C96,75,192,85,288,80C384,75,480,53,576,48C672,43,768,53,864,64C960,75,1056,85,1152,80C1248,75,1344,53,1392,42.7L1440,32L1440,120L1392,120C1344,120,1248,120,1152,120C1056,120,960,120,864,120C768,120,672,120,576,120C480,120,384,120,288,120C192,120,96,120,48,120L0,120Z'/%3E%3Cpath fill='%232a8bc0' fill-opacity='0.3' d='M0,96L48,90.7C96,85,192,75,288,69.3C384,64,480,64,576,74.7C672,85,768,107,864,106.7C960,107,1056,85,1152,74.7C1248,64,1344,64,1392,64L1440,64L1440,120L1392,120C1344,120,1248,120,1152,120C1056,120,960,120,864,120C768,120,672,120,576,120C480,120,384,120,288,120C192,120,96,120,48,120L0,120Z'/%3E%3C/svg%3E") bottom/cover no-repeat;
-  pointer-events: none;
-  z-index: 0;
-}
-
 /* Subtle wave squiggles on the water surface (like the game) */
 body::before {
   content: '';
@@ -93,7 +82,7 @@ body::before {
 .ship {
   position: absolute;
   top: 100%;
-  animation: sail linear infinite;
+  width: 72px;
   will-change: transform;
 }
 @keyframes sail {
@@ -1737,15 +1726,18 @@ const SHIP_MIN = 5, SHIP_MAX = 8;
 
 function rand(min, max) { return min + Math.random() * (max - min); }
 
-function randomizeShip(ship, inner, img) {
+// Launch (or relaunch) a ship on a fresh voyage. All randomness is applied
+// here, before the animation starts — never while it is running.
+function launchShip(ship, img, initialScatter) {
   const sprite = 1 + Math.floor(Math.random() * SHIP_SPRITE_COUNT);
-  const width = Math.round(rand(46, 100));                 // px
-  const duration = rand(26, 55) * (width / 70);            // bigger ships sail slower
   img.src = `images/ship_top_${sprite}.png`;
   ship.style.left = rand(2, 88) + '%';
-  ship.style.width = width + 'px';
-  ship.style.animationDuration = duration.toFixed(1) + 's';
-  inner.style.animationDuration = rand(3.5, 6.5).toFixed(1) + 's';
+  const duration = rand(30, 55);
+  // first lap only: negative delay scatters ships across the screen on load
+  const delay = initialScatter ? -rand(0, duration * 0.9) : 0;
+  ship.style.animation = 'none';
+  void ship.offsetWidth; // force reflow so the browser treats this as a new animation
+  ship.style.animation = `sail ${duration.toFixed(1)}s linear ${delay.toFixed(1)}s forwards`;
 }
 
 function spawnFleet() {
@@ -1757,16 +1749,17 @@ function spawnFleet() {
     ship.className = 'ship';
     const inner = document.createElement('div');
     inner.className = 'ship-inner';
+    inner.style.animationDuration = rand(3.5, 6.5).toFixed(1) + 's'; // sway speed, set once
     const img = document.createElement('img');
     img.alt = '';
     img.onerror = () => ship.remove();   // sprite missing → drop this ship
     inner.appendChild(img);
     ship.appendChild(inner);
-    randomizeShip(ship, inner, img);
-    // negative delay scatters ships across the screen on load
-    ship.style.animationDelay = (-Math.random() * parseFloat(ship.style.animationDuration)).toFixed(1) + 's';
-    // each lap, become a "new" ship: fresh sprite, lane, size, speed
-    ship.addEventListener('animationiteration', () => randomizeShip(ship, inner, img));
+    // voyage finished → relaunch from the bottom as a "new" ship
+    ship.addEventListener('animationend', e => {
+      if (e.target === ship && e.animationName === 'sail') launchShip(ship, img, false);
+    });
+    launchShip(ship, img, true);
     layer.appendChild(ship);
   }
 }
