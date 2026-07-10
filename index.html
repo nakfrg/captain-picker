@@ -1723,15 +1723,43 @@ function render() {
 // ── sailing ships background ──
 const SHIP_SPRITE_COUNT = 6;   // images/ship_top_1.png … ship_top_6.png
 const SHIP_MIN = 5, SHIP_MAX = 8;
+const SHIP_W = 72;             // must match .ship width in CSS
+const LANE_GAP = 30;           // horizontal breathing room between lanes
+const LANE_W = SHIP_W + LANE_GAP;
+
+// Each ship owns one horizontal lane for its whole voyage, and no two ships
+// ever share a lane — so they can never collide, even when overtaking.
+const occupiedLanes = new Set();
 
 function rand(min, max) { return min + Math.random() * (max - min); }
+
+function laneCount() {
+  return Math.max(1, Math.floor(window.innerWidth / LANE_W));
+}
+
+function pickFreeLane() {
+  const free = [];
+  for (let i = 0; i < laneCount(); i++) if (!occupiedLanes.has(i)) free.push(i);
+  if (free.length === 0) return null;
+  return free[Math.floor(Math.random() * free.length)];
+}
 
 // Launch (or relaunch) a ship on a fresh voyage. All randomness is applied
 // here, before the animation starts — never while it is running.
 function launchShip(ship, img, initialScatter) {
+  const lane = pickFreeLane();
+  if (lane !== null) {
+    if (ship._lane !== undefined) occupiedLanes.delete(ship._lane);
+    ship._lane = lane;
+    occupiedLanes.add(lane);
+    // small jitter inside the lane so the fleet doesn't look grid-aligned
+    ship.style.left = Math.round(lane * LANE_W + rand(2, LANE_GAP - 2)) + 'px';
+  }
+  // if no lane is free (e.g. window shrank), the ship re-sails its current lane;
+  // a ship that never had a lane can't be placed safely, so retire it
+  if (lane === null && ship._lane === undefined) { ship.remove(); return; }
   const sprite = 1 + Math.floor(Math.random() * SHIP_SPRITE_COUNT);
   img.src = `images/ship_top_${sprite}.png`;
-  ship.style.left = rand(2, 88) + '%';
   const duration = rand(30, 55);
   // first lap only: negative delay scatters ships across the screen on load
   const delay = initialScatter ? -rand(0, duration * 0.9) : 0;
@@ -1743,7 +1771,8 @@ function launchShip(ship, img, initialScatter) {
 function spawnFleet() {
   const layer = document.getElementById('shipLayer');
   if (!layer) return;
-  const count = SHIP_MIN + Math.floor(Math.random() * (SHIP_MAX - SHIP_MIN + 1));
+  const wanted = SHIP_MIN + Math.floor(Math.random() * (SHIP_MAX - SHIP_MIN + 1));
+  const count = Math.min(wanted, laneCount()); // never more ships than lanes
   for (let i = 0; i < count; i++) {
     const ship = document.createElement('div');
     ship.className = 'ship';
@@ -1752,7 +1781,7 @@ function spawnFleet() {
     inner.style.animationDuration = rand(3.5, 6.5).toFixed(1) + 's'; // sway speed, set once
     const img = document.createElement('img');
     img.alt = '';
-    img.onerror = () => ship.remove();   // sprite missing → drop this ship
+    img.onerror = () => { occupiedLanes.delete(ship._lane); ship.remove(); }; // sprite missing → drop this ship
     inner.appendChild(img);
     ship.appendChild(inner);
     // voyage finished → relaunch from the bottom as a "new" ship
